@@ -6,7 +6,7 @@
 ### FOR FULL INSTRUCTIONS: README.md
 ### FOR BRIEF INSTRUCTIONS: ./mariadb_quick_review.sh --help
 
-SCRIPT_VERSION='1.0.0'
+SCRIPT_VERSION='1.0.1'
 # Establish working directory and source pre_quick_review.sh
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source ${SCRIPT_DIR}/pre_quick_review.sh

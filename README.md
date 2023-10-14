@@ -57,6 +57,12 @@ $ ./mariadb_quick_review.sh --client_side_outfiles
 #### Running the mariadb_quick_review.sh script from a remote client
 The mariadb_quick_review.sh will check whether the hostname for the bash shell is the same as the hostname for the database. If they are different, the script will save files on the client machine by redirect. This means you can run the script even when you do not have access to the host of the database server. Use the switch `--client_side_outfiles` to force a save using redirect from the host of the database.
 
+## Sharing Results With MariaDB Support
+When the script completes, it will archive all the output into one compressed file. The script will indictate the name of the file. It will be found in the directory /tmp/mariadb_quick_review . An example of the file name:
+```
+/tmp/mariadb_quick_review/QK-MjA3OD_logs_Oct-14.tar.gz
+```
+
 #### Privileges Required;
 ```SQL
 -- GRANTS REQUIRED FOR SELECT INTO OUTFILE (SCRIPT IS RUN ON HOST OF THE DATABASE).
