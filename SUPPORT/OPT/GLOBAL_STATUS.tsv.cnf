@@ -1,0 +1,6 @@
+# GLOBAL_STATUS
+[mariadb-import]
+fields-terminated-by = '\t' 
+lines-terminated-by = '\n' 
+fields-escaped-by = '\\'  
+columns = 'VARIABLE_NAME,VARIABLE_VALUE'

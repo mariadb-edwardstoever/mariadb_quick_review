@@ -1,0 +1,6 @@
+# SLAVE_STATUS
+[mariadb-import]
+fields-terminated-by = '\t' 
+lines-terminated-by = '\n' 
+fields-escaped-by = '\\'  
+columns = 'RUN_ID,TICK,HOSTNAME,SECONDS_BEHIND_MASTER,GTID_IO_POS,GTID_SLAVE_POS,SLAVE_SQL_RUNNING_STATE,LAST_SQL_ERROR,LAST_IO_ERROR'

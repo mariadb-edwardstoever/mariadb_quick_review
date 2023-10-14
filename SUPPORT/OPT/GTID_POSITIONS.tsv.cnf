@@ -1,0 +1,6 @@
+# GTID_POSITIONS
+[mariadb-import]
+fields-terminated-by = '\t' 
+lines-terminated-by = '\n' 
+fields-escaped-by = '\\'   
+columns = 'RUN_ID,TICK,HOSTNAME,GTID_BINLOG_POS,GTID_BINLOG_STATE,GTID_CURRENT_POS,GTID_SLAVE_POS'

@@ -1,0 +1,7 @@
+# GLOBAL_VARIABLES
+[mariadb-import]
+fields-terminated-by = ',' 
+fields-optionally-enclosed-by = '"' 
+lines-terminated-by = '\n' 
+fields-escaped-by = '\\'  
+columns = 'VARIABLE_NAME,VARIABLE_VALUE'

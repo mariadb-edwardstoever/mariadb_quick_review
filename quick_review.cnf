@@ -1,0 +1,18 @@
+# mariadb_quick_review client configuration file
+# created by Edward Stoever for MariaDB Support
+
+# Use this file to specify any standard client options 
+# If none are specified, the script will attempt a socket connection from 
+# unix account, such as root@localhost.
+
+# The group name must be [mariadb_quick_review]
+[mariadb_quick_review]
+# user = dbpgf21089765
+# password = "QeJHj74YS+n0hA13zGtM2O"
+# host = mindapp.ha.db7.mariadb.com
+# port = 3306
+# socket = /run/mysqld/mysqld.sock
+# ssl-cert = /etc/mysql/client-cert.pem
+# ssl-key  = /etc/mysql/client-key.pem
+# ssl-verify-server-cert = on
+# ssl-ca = /etc/ssl/certs/skysql_chain_2022.pem
