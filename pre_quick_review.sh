@@ -12,7 +12,6 @@ SLAVES_RUNNING=0; # DEFAULT
 OUT_TO_FILES='TRUE' # DEFAULT
 MINS=5 #DEFAULT
 RUNID=$(echo $(echo $(($RANDOM * $RANDOM +100000))| base64 | sed 's/\=//g' | head -c 6 2>/dev/null || echo 'NOTRND')  | awk '{print "QK-" substr($0,1,6)}')
-SUBROUTINE="$RUNID-0000"
 MARIADB_PROCESS_OWNER="$(ps -ef | grep -E '(mariadbd|mysqld)' | grep -v "grep" | head -1 |awk '{print $1}')"
 
 function display_help_message() {
@@ -21,6 +20,7 @@ printf "This script can be run without options. Not indicating an option value w
   --stats_per_min=2    # indicate the number of times per minute to collect performance statistics, default 1
                        # Valid values for stats_per_min: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60
   --multi_processlist  # Turns on collecting processlist with each statistics collection. Turned off by default.
+  --test               # Test connect to database and display script version
   --version            # Test connect to database and display script version
   --help               # Display the help menu
 
@@ -79,7 +79,7 @@ function slaves_running(){
   local SQL_FILE="$SQL_DIR/SLAVES_RUNNING.sql"
   local QSQL=$(cat $SQL_FILE)
   if [ "$DEBUG_SQL" == "TRUE" ] ; then
-  echo "$QSQL"; echo; echo; exit 0
+  echo "$QSQL"; echo; echo;
   else
     SLAVES_RUNNING=$($CMD_MARIADB $CLOPTS -ABNe "$QSQL");
   fi
@@ -100,6 +100,11 @@ function is_galera(){
   fi
 }
 
+function display_stats_collection() {
+if [ ! $DISPLAY_VERSION ]; then
+  printf "PERF STATS: "; TEMP_COLOR=lmagenta; print_color "Will collect $((MINS * PER_MIN)) times during $MINS $(singular_plural minute $MINS)."; unset TEMP_COLOR;
+fi
+}
 
 function check_required_privs() {
   if [ "$CLIENT_SIDE" == 'TRUE' ]; then
@@ -108,23 +113,24 @@ function check_required_privs() {
    SQL_FILE="$SQL_DIR/SERVER_OUTFILE_PRIVS.sql"
   fi
   if [ ! "$BYPASS_PRIV_CHECK" == "TRUE" ]; then
-    ERR=$($CMD_MARIADB $CLOPTS -e "source $SQL_FILE")
-    if [ "$ERR" ]; then die "$ERR"; fi
+    if [ "$DEBUG_SQL" == "TRUE" ] ; then
+      cat $SQL_FILE; echo; echo; 
+    else
+      ERR=$($CMD_MARIADB $CLOPTS -e "source $SQL_FILE")
+      if [ "$ERR" ]; then die "$ERR"; fi
+	fi
   fi
 }
 
 function is_db_localhost(){
   local SQL_FILE="$SQL_DIR/IS_DB_LOCALHOST.sql"
   local QSQL=$(cat $SQL_FILE)
-  if [ "$DEBUG_SQL" == "TRUE" ] ; then
-    echo "$QSQL"; echo; echo; 
-  else
+  # YOU CANNOT DEBUG_SQL HERE BECAUSE THIS EFFECTS SQL TEXT, SO IT MUST BE RUN
     DBHOST=$($CMD_MARIADB $CLOPTS -ABNe "$QSQL")
     CLIENTHOST=$(hostname)
     if [ ! "$DBHOST" == "$CLIENTHOST" ]; then CLIENT_SIDE='TRUE'; fi
       printf "Database Host: "; TEMP_COLOR=lmagenta; print_color "$DBHOST\n"; unset TEMP_COLOR;
       printf "Client Host:   "; TEMP_COLOR=lmagenta; print_color "$CLIENTHOST\n"; unset TEMP_COLOR;
-  fi
 }
 
 
@@ -153,25 +159,25 @@ function start_message() {
 }
 
 function run_sql() {
-  SQL_FILE="$SQL_DIR/$1.sql"
+  local SQL_FILE="$SQL_DIR/$1.sql"
   if [ ! "$CLIENT_SIDE" == 'TRUE' ]; then
     if [ ! $2 ]; then
-      OUTFILE="$PT_TMPDIR/$1.out"
+      OUTFILE="$PT_TMPDIR/$1.out"; ENCLOSURE='';
     else
-      OUTFILE="$PT_TMPDIR/$2.out"
+      OUTFILE="$PT_TMPDIR/$2.out"; ENCLOSURE=''; 
     fi
   else
     if [ ! $2 ]; then
-      OUTFILE="$PT_TMPDIR/$1.tsv"
+      OUTFILE="$PT_TMPDIR/$1.tsv"; ENCLOSURE='"'; 
     else
-      OUTFILE="$PT_TMPDIR/$2.tsv"
+      OUTFILE="$PT_TMPDIR/$2.tsv"; ENCLOSURE='"'; 
     fi
   fi
-
-
+  CLIENT_DT="$(date +"%Y-%m-%d %H:%M:%S")"; CLIENT_HOST="$(hostname)"; CLIENT_OS_ACCT=$(whoami)
+  if [ ! $SUBROUTINE ]; then SUBROUTINE=${RUNID}; fi # SUPPORTS PROCESSLIST RUN ONCE OR MULTIPLE TIMES 
   INTO_OUTFILE="INTO OUTFILE '$OUTFILE' FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '\\\\'"
-  export OUTFILE SCRIPT_VERSION RUNID SUBROUTINE
-  SQL=$(envsubst < $SQL_FILE)
+  export OUTFILE SCRIPT_VERSION RUNID SUBROUTINE CLIENT_HOST CLIENT_DT CLIENT_OS_ACCT ENCLOSURE
+  local SQL=$(envsubst < $SQL_FILE)
   
   if [ "$OUT_TO_FILES" == "TRUE" ] && [ ! "$CLIENT_SIDE" == 'TRUE' ]; then
     SQL="$SQL $INTO_OUTFILE"
@@ -200,10 +206,30 @@ function run_sql() {
   fi 
 }
 
+function record_engine_innodb_status (){
+local SQL_FILE="$SQL_DIR/ENGINE_INNODB_STATUS.sql"
+  local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
+  local SQL=$(cat $SQL_FILE)
+  if [ "$DEBUG_SQL" == "TRUE" ] ; then
+    echo "$SQL"; echo; echo;
+  else  
+    local STATUS=$($CMD_MARIADB $CLOPTS -Ae "$SQL")
+    printf "\"$RUNID\"\t\"$STATUS\"" > $OUTFILE
+    # IN THEORY, THERE DOES NOT EXIST A CASE IN WHICH REMOTE DB CREATES AN INACCESSIBLE OUTFILE.
+    # SO THIS MESSAGE SHOULD NEVER APPEAR BECAUSE IF REMOTE, CLIENT_SIDE='TRUE':
+    if [ "$OUT_TO_FILES" == "TRUE" ] && [ ! "$CLIENT_SIDE" == 'TRUE' ] && [ ! -f "$OUTFILE" ] && [ ! "$DEBUG_SQL" == 'TRUE' ]; then echo "FILE WRITTEN ON DATABASE HOST: $OUTFILE"; fi
+    if [ "$OUT_TO_FILES" == "TRUE" ] && [ -f "$OUTFILE" ]; then echo "FILE WRITTEN: $OUTFILE"; fi
+
+    if [ "$DEBUG_OUTFILE" == "TRUE" ] && [ -f "$OUTFILE" ]; then
+      cat $OUTFILE
+    fi 
+  fi
+}
+
 function record_slave_status(){
-  SQL_FILE="$SQL_DIR/SLAVE_STATUS.sql"
-  OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
-  SQL=$(cat $SQL_FILE)
+  local SQL_FILE="$SQL_DIR/SLAVE_STATUS.sql"
+  local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
+  local SQL=$(cat $SQL_FILE)
   if [ "$DEBUG_SQL" == "TRUE" ] ; then
     echo "$SQL"; echo; echo;
   else  
@@ -377,6 +403,7 @@ fi
   if [ "$params" == '--debug_outfiles' ]; then DEBUG_OUTFILE='TRUE'; VALID=TRUE; fi
   if [ "$params" == '--bypass_priv_check' ]; then BYPASS_PRIV_CHECK='TRUE'; VALID=TRUE; fi
   if [ "$params" == '--version' ]; then DISPLAY_VERSION=TRUE; VALID=TRUE; fi
+  if [ "$params" == '--test' ]; then DISPLAY_VERSION=TRUE; VALID=TRUE; fi
   if [ "$params" == '--help' ]; then HELP=TRUE; VALID=TRUE; fi
   if [ ! $VALID ] && [ ! $INVALID_INPUT ];  then  INVALID_INPUT="$params"; fi
 done

@@ -6,9 +6,7 @@
 ### FOR FULL INSTRUCTIONS: README.md
 ### FOR BRIEF INSTRUCTIONS: ./import_quick_review.sh --help
 
-
-
-SCRIPT_VERSION='0.0.0'
+SCRIPT_VERSION='1.0.2'
 # Establish working directory and source pre_import.sh
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source ${SCRIPT_DIR}/pre_import.sh
@@ -43,6 +41,7 @@ set_runid;
 mk_tmpdir;
 uncompress_media_file;
 create_schema;
+import_from_file CURRENT_RUN
 import_from_file GLOBAL_STATUS
 import_from_file GLOBAL_VARIABLES
 import_from_file GTID_POSITIONS
@@ -54,26 +53,10 @@ import_from_file SERVER_PERFORMANCE
 import_from_file SERVER_STATE
 import_from_file SLAVE_STATUS
 import_from_file TABLE_KEY_COUNTS
+import_from_file PLUGINS
+import_from_file ENGINE_INNODB_STATUS
 
-
+post_import
 
 exit 0
 
-# mariadb-import --defaults-file=OPT/SERVER_PERFORMANCE.cnf quick_review /tmp/mariadb_quick_review/83616.UyuCrD/SERVER_PERFORMANCE.001.out /tmp/mariadb_quick_review/83616.UyuCrD/SERVER_PERFORMANCE.002.out
-GLOBAL_STATUS         OUT
-GLOBAL_VARIABLES      OUT
-GTID_POSITIONS.       OUT
-LOW_CARDINALITY_IDX   OUT
-PERFORMANCE_WARNINGS. OUT
-PROCESSLIST           OUT
-REVIEW_WARNINGS       OUT
-SERVER_PERFORMANCE.   OUT  
-SERVER_STATE          OUT
-SLAVE_STATUS.         OUT
-TABLE_KEY_COUNTS
-
-
-
-
-echo $SCHEMA_NAME
-create_schema;

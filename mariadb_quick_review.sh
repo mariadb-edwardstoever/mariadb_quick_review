@@ -6,7 +6,7 @@
 ### FOR FULL INSTRUCTIONS: README.md
 ### FOR BRIEF INSTRUCTIONS: ./mariadb_quick_review.sh --help
 
-SCRIPT_VERSION='1.0.1'
+SCRIPT_VERSION='1.0.2'
 # Establish working directory and source pre_quick_review.sh
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source ${SCRIPT_DIR}/pre_quick_review.sh
@@ -16,9 +16,12 @@ start_message;
 
 
 if [ $INVALID_INPUT ]; then display_help_message; die "Invalid option: $INVALID_INPUT"; fi
-if [ $DISPLAY_VERSION ]; then exit 0; fi
 if [ $HELP ]; then display_help_message; exit 0; fi
-if [ ! $CAN_CONNECT ]; then die "Database connection failed. Read the file README.md. Edit the file quick_review.cnf."; fi
+if [ ! $CAN_CONNECT ]; then 
+  TEMP_COLOR=lred; print_color "Failing command: ";unset TEMP_COLOR; 
+  TEMP_COLOR=lyellow; print_color "$CMD_MARIADB $CLOPTS\n";unset TEMP_COLOR; 
+  ERRTEXT=$($CMD_MARIADB $CLOPTS -e "select now();" 2>&1); TEMP_COLOR=lcyan; print_color "$ERRTEXT\n";unset TEMP_COLOR;
+  die "Database connection failed. Read the file README.md. Edit the file quick_review.cnf."; fi
 whoami_db;
 
 
@@ -33,8 +36,13 @@ fi
 is_primary;
 is_replica;
 is_galera;
+if [ ! $PER_MIN ]; then PER_MIN=1; STATS_ON_SEC=("00"); fi # DEFAULT, ALSO USED BY display_stats_collection
+display_stats_collection;
+echo
 check_required_privs;
 slaves_running; # How many slaves are running?
+
+if [ $DISPLAY_VERSION ]; then exit 0; fi
 echo "";
 
 # QUERIES RUN ONE TIME
@@ -44,8 +52,15 @@ run_sql GLOBAL_STATUS
 run_sql TABLE_KEY_COUNTS
 run_sql REVIEW_WARNINGS
 run_sql LOW_CARDINALITY_IDX
+run_sql PLUGINS
 if [ ! "$MULTI_PROCESSLIST" == 'TRUE' ]; then
   run_sql PROCESSLIST
+fi
+record_engine_innodb_status ENGINE_INNODB_STATUS
+
+# CURRENT_RUN is collected just one time, and in the PERF STATS loop. If no perf stats loop, collect it here:
+if [ "$MINS" == "0" ]; then
+  run_sql CURRENT_RUN
 fi
 
 #
@@ -62,7 +77,7 @@ if [ "$SECONDS_TO_BEGIN_PERF_STATS" != "0" ] && [ "$MINUTES_TO_COLLECT_PERF_STAT
   TEMP_COLOR=lcyan; print_color "Performance statistics collection will begin in $SCNDS $(singular_plural second $SCNDS).\n"; unset TEMP_COLOR
 fi
 
-if [ ! $PER_MIN ]; then PER_MIN=1; STATS_ON_SEC=("00"); fi # DEFAULT
+
 INDEX=0;
 MAX_INDEX=$(( PER_MIN - 1))
 MINS_REMAINING=$MINUTES_TO_COLLECT_PERF_STATS
@@ -71,6 +86,11 @@ for (( ii=1; ii<=$((MINUTES_TO_COLLECT_PERF_STATS * PER_MIN)); ii++))
    while [[ ! "$(date +%S)" == "${STATS_ON_SEC[${INDEX}]}" ]]  && [ ! "$DEBUG_SQL" == 'TRUE' ]; do sleep 0.2; done
    if [ $INDEX -lt $MAX_INDEX ]; then INDEX=$(( INDEX + 1 )); else INDEX=0; fi
    SUBROUTINE="$RUNID-$(printf "%04d" $ii)"
+
+#### WE NEED THE DB HOST TIMESTAMP FOR FIRST LOOP
+if [ $ii -eq 1 ]; then
+  run_sql CURRENT_RUN
+fi
 
 #
 # QUERIES RUN MULTIPLE TIMES

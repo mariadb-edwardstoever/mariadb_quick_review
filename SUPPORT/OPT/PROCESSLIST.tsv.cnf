@@ -1,6 +1,7 @@
 # PROCESSLIST
 [mariadb-import]
-fields-terminated-by = '\t' 
+fields-terminated-by = '\t'
+fields-optionally-enclosed-by = '"'
 lines-terminated-by = '\n' 
 fields-escaped-by = '\\' 
 columns = 'RUN_ID,TICK,CONNECTION_ID,USER,HOST,DB,COMMAND,TIME,STATE,INFO,TIME_MS,STAGE,MAX_STAGE,PROGRESS,MEMORY_USED,MAX_MEMORY_USED,EXAMINED_ROWS,QUERY_ID,TID'

@@ -86,13 +86,24 @@ fi
 }
 
 function create_schema() {
-  SQL_FILE="$SCRIPT_DIR/SQL/CREATE_SCHEMA.sql"
+  local SQL_FILE="$SCRIPT_DIR/SQL/CREATE_SCHEMA.sql"
 
   export SCHEMA_NAME
   SQL=$(envsubst < $SQL_FILE)
   
   mariadb -e "$SQL"
 }
+
+
+function post_import() {
+  local SQL_FILE="$SCRIPT_DIR/SQL/POST_IMPORT.sql"
+
+  export SCHEMA_NAME
+  SQL=$(envsubst < $SQL_FILE)
+  
+  mariadb -e "$SQL"
+}
+
 
 function import_from_file(){
   TABLE_NAME=$1

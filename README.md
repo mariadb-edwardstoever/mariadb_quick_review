@@ -1,5 +1,15 @@
 # mariadb_quick_review
-A bash based version of MariaDB Review SQL script. This script is for initial review of MariaDB server for MariaDB Support tickets. This script does not create a schema or tables. In many cases, this script can be run on the database host with no modification as simply as:
+
+To download the mariadb_quick_review script direct to your linux server, you may use git or wget:
+```
+git clone https://github.com/mariadb-edwardstoever/mariadb_quick_review.git
+```
+```
+wget https://github.com/mariadb-edwardstoever/mariadb_quick_review/archive/refs/heads/main.zip
+```
+
+### Overview
+A bash based version of MariaDB Review SQL script. This script is for initial review of MariaDB server for MariaDB Support tickets. This script collects data about the MariaDB server without creating any database objects. In many cases, this script can be run on the database host with no modification as simply as:
 ```
 $ ./mariadb_quick_review.sh
 
@@ -7,11 +17,12 @@ $ ./mariadb_quick_review.sh
 
 ### Available Options
 ```
-This script can be run without options. Not indicating an option value will use the default.
+This script can be run without options. Not indicating an option value will use the default value.
   --minutes=10         # indicate the number of minutes to collect performance statistics, default 5
   --stats_per_min=2    # indicate the number of times per minute to collect performance statistics, default 1
                        # Valid values for stats_per_min: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60
   --multi_processlist  # Turns on collecting processlist with each statistics collection. Turned off by default.
+  --test               # Test connect to database and display script version
   --version            # Test connect to database and display script version
   --help               # Display the help menu
 
