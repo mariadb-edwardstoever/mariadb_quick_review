@@ -7,7 +7,7 @@ TEMPDIR="/tmp"
 CONFIG_FILE="$SCRIPT_DIR/quick_review.cnf"
 SQL_DIR="$SCRIPT_DIR/SQL"
 TOOL="mariadb_quick_review"
-PT_TMPDIR=""
+PT_TMPDIR="/PATH/TO"
 SLAVES_RUNNING=0; # DEFAULT
 OUT_TO_FILES='TRUE' # DEFAULT
 MINS=5 #DEFAULT
@@ -32,6 +32,18 @@ printf "This script can be run without options. Not indicating an option value w
   --no_outfiles           # Output to stdout instead of to files
 
 Read the file README.md for more information.\n"
+}
+
+function display_title(){
+  local BLANK='  │                                                         │'
+  printf "  ┌─────────────────────────────────────────────────────────┐\n"
+  printf "$BLANK\n"
+  printf "  │                  MARIADB QUICK REVIEW                   │\n"
+  printf '%-62s' "  │                      Version $SCRIPT_VERSION"; printf "│\n"
+  printf "$BLANK\n"
+  printf "  │      Script by Edward Stoever for MariaDB Support       │\n"
+  printf "$BLANK\n"
+  printf "  └─────────────────────────────────────────────────────────┘\n"
 }
 
 function is_primary(){
@@ -128,7 +140,7 @@ function is_db_localhost(){
   # YOU CANNOT DEBUG_SQL HERE BECAUSE THIS EFFECTS SQL TEXT, SO IT MUST BE RUN
     DBHOST=$($CMD_MARIADB $CLOPTS -ABNe "$QSQL")
     CLIENTHOST=$(hostname)
-    if [ ! "$DBHOST" == "$CLIENTHOST" ]; then CLIENT_SIDE='TRUE'; fi
+    if [ ! "$DBHOST" == "$CLIENTHOST" ]; then CLIENT_SIDE='TRUE'; else DB_IS_LOCAL='TRUE'; fi
       printf "Database Host: "; TEMP_COLOR=lmagenta; print_color "$DBHOST\n"; unset TEMP_COLOR;
       printf "Client Host:   "; TEMP_COLOR=lmagenta; print_color "$CLIENTHOST\n"; unset TEMP_COLOR;
 }
@@ -144,11 +156,7 @@ function start_message() {
   else 
     RUNAS="$(whoami)"
   fi
-
-  OUTP="MariaDB Quick Review version $SCRIPT_VERSION. Script by Edward Stoever for MariaDB Support. Script started at: "
-  HDR=$($CMD_MARIADB $CLOPTS -s -e "select concat('$OUTP', now()) as NOTE" 2>/dev/null || echo "$OUTP$(date +'%Y-%m-%d %H:%M:%S - No DB connection.')")
-  if [[ ! "$HDR" =~ .*"No DB connection".* ]]; then CAN_CONNECT=true; fi
-  printf "$HDR\n"
+  $CMD_MARIADB $CLOPTS -s -e "select now()" 1>/dev/null 2>/dev/null && CAN_CONNECT=true || unset CAN_CONNECT
   if [ $CAN_CONNECT ]; then
     TEMP_COLOR=lgreen; print_color "Can connect to database.\n"; unset TEMP_COLOR;
   else
@@ -156,6 +164,17 @@ function start_message() {
   fi
   printf "OS account:    "; TEMP_COLOR=lmagenta; print_color "$RUNAS\n"; unset TEMP_COLOR;
 
+}
+
+function display_file_written_message(){
+  # IN THEORY, THERE DOES NOT EXIST A CASE IN WHICH REMOTE DB CREATES AN INACCESSIBLE OUTFILE.
+  # SO THIS MESSAGE SHOULD NEVER APPEAR BECAUSE IF REMOTE, CLIENT_SIDE='TRUE':
+  if [ "$OUT_TO_FILES" == "TRUE" ] && [ ! "$CLIENT_SIDE" == 'TRUE' ] && [ ! -f "$OUTFILE" ] && [ ! "$DEBUG_SQL" == 'TRUE' ]; then echo "FILE WRITTEN ON DATABASE HOST: $OUTFILE"; fi
+  if [ "$OUT_TO_FILES" == "TRUE" ] && [ -f "$OUTFILE" ]; then echo "FILE WRITTEN: $OUTFILE"; fi
+
+  if [ "$DEBUG_OUTFILE" == "TRUE" ] && [ -f "$OUTFILE" ]; then
+    cat $OUTFILE
+  fi 
 }
 
 function run_sql() {
@@ -196,14 +215,142 @@ function run_sql() {
 	  fi
 	fi
   fi
-  # IN THEORY, THERE DOES NOT EXIST A CASE IN WHICH REMOTE DB CREATES AN INACCESSIBLE OUTFILE.
-  # SO THIS MESSAGE SHOULD NEVER APPEAR BECAUSE IF REMOTE, CLIENT_SIDE='TRUE':
-  if [ "$OUT_TO_FILES" == "TRUE" ] && [ ! "$CLIENT_SIDE" == 'TRUE' ] && [ ! -f "$OUTFILE" ] && [ ! "$DEBUG_SQL" == 'TRUE' ]; then echo "FILE WRITTEN ON DATABASE HOST: $OUTFILE"; fi
-  if [ "$OUT_TO_FILES" == "TRUE" ] && [ -f "$OUTFILE" ]; then echo "FILE WRITTEN: $OUTFILE"; fi
+  display_file_written_message 
+}
 
-  if [ "$DEBUG_OUTFILE" == "TRUE" ] && [ -f "$OUTFILE" ]; then
-    cat $OUTFILE
-  fi 
+function record_disks (){
+local SQL_FILE="$SQL_DIR/DISKS.sql"
+  local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv because logic in SQL prevents SELECT INTO OUTFILE
+  local SQL=$(cat $SQL_FILE)
+  if [ "$DEBUG_SQL" == "TRUE" ] ; then
+    echo "$SQL"; echo; echo;
+  else  
+    local DISKS=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
+    while IFS= read -r line; do
+      if [ ! -z "$line" ]; then printf "$RUNID\t$line\n" >> $OUTFILE; else touch $OUTFILE; fi
+    done <<< "$DISKS"
+    display_file_written_message
+  fi
+}
+
+function record_mysql_top(){
+if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
+local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv 
+if [ "$(id --user $MARIADB_PROCESS_OWNER  2>/dev/null)" ] && [ "$DB_IS_LOCAL" == 'TRUE' ]; then
+  TOP="$(top -bc -n1 -u ${MARIADB_PROCESS_OWNER} 2>/dev/null)"
+  if [ ! -z "$TOP" ]; then 
+    printf '%b\n' "\"$SUBROUTINE\"\t\"$TOP\"" > $OUTFILE
+  else
+	printf "\"$SUBROUTINE\"\t\"NO top ACTIVITY for $MARIADB_PROCESS_OWNER\"\n" > $OUTFILE
+  fi
+  display_file_written_message
+fi
+}
+
+function record_df(){
+if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
+local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv 
+if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
+  local DF="$(df -h 2>/dev/null)"
+  if [ ! -z "$DF" ]; then 
+    printf '%b\n' "\"$RUNID\"\t\"$DF\"" > $OUTFILE
+  else
+	printf "\"$RUNID\"\t\"df not available\"\n" > $OUTFILE
+  fi
+  display_file_written_message
+fi
+}
+
+function record_memory_info(){
+if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
+local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv 
+if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
+  local MEMINFO=$(free -h 2>/dev/null)
+
+  if [ ! -z "$MEMINFO" ]; then 
+    printf '%b\n' "\"$RUNID\"\t\"$MEMINFO\"" > $OUTFILE
+  else
+	printf "\"$RUNID\"\t\"Memory info is not available\"\n" > $OUTFILE
+  fi
+  display_file_written_message
+fi
+}
+
+function record_cpu_info(){
+if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
+local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv 
+if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
+  local CPUINFO=$(lscpu | grep -E "(op-mode|ddress|hread|ocket|name|MHz|vendor|cache)" 2>/dev/null)
+
+  if [ ! -z "$CPUINFO" ]; then 
+    printf '%b\n' "\"$RUNID\"\t\"$CPUINFO\"" > $OUTFILE
+  else
+	printf "\"$RUNID\"\t\"CPU info is not available\"\n" > $OUTFILE
+  fi
+  display_file_written_message
+fi
+}
+
+function record_machine_architecture(){
+if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
+local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv 
+if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
+   if [ "$(grep docker /proc/1/cgroup 2>/dev/null)" ]; then
+     local ARCH="Docker Container"
+   elif [ "$(grep kube /proc/1/cgroup 2>/dev/null)" ]; then
+     local ARCH="Kubernetes"
+   else
+     local ARCH=$(hostnamectl | grep -E "(Static|Chassis|Virtualization|Operat|Kernel|Arch)" 2>/dev/null)
+   fi
+
+  if [ ! -z "$ARCH" ]; then 
+    printf '%b\n' "\"$RUNID\"\t\"$ARCH\"" > $OUTFILE
+  else
+	printf "\"$RUNID\"\t\"Machine architecture not available\"\n" > $OUTFILE
+  fi
+  display_file_written_message
+fi
+}
+
+function record_recent_errors(){
+if [ ! "$DB_IS_LOCAL" == 'TRUE' ]; then return; fi
+if [ ! -f "$LOG_ERROR" ] ; then return; fi
+local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv 
+RECENT=$(tail -200000 $LOG_ERROR | grep -i "\[ERROR\]")
+ while IFS= read -r line; do
+   if [ ! -z "$line" ]; then printf "$RUNID\t\"$line\"\n" >> $OUTFILE; else touch $OUTFILE; fi
+ done <<< "$RECENT"
+ display_file_written_message
+}
+
+function record_slave_hosts (){
+local SQL_FILE="$SQL_DIR/SLAVE_HOSTS.sql"
+  local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
+  local SQL=$(cat $SQL_FILE)
+  if [ "$DEBUG_SQL" == "TRUE" ] ; then
+    echo "$SQL"; echo; echo;
+  else  
+    local SLAVE_HOSTS=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
+    while IFS= read -r line; do
+      if [ ! -z "$line" ]; then printf "$RUNID\t$line\n" >> $OUTFILE; else touch $OUTFILE; fi
+    done <<< "$SLAVE_HOSTS"
+    display_file_written_message
+  fi
+}
+
+function record_open_tables (){
+local SQL_FILE="$SQL_DIR/OPEN_TABLES.sql"
+  local OUTFILE="$PT_TMPDIR/$2.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
+  local SQL=$(cat $SQL_FILE)
+  if [ "$DEBUG_SQL" == "TRUE" ] ; then
+    echo "$SQL"; echo; echo;
+  else  
+    local OPEN_TABLES=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
+    while IFS= read -r line; do
+      if [ ! -z "$line" ]; then printf "$SUBROUTINE\t$line\n" >> $OUTFILE; else touch $OUTFILE; fi
+    done <<< "$OPEN_TABLES"
+    display_file_written_message
+  fi
 }
 
 function record_engine_innodb_status (){
@@ -215,14 +362,7 @@ local SQL_FILE="$SQL_DIR/ENGINE_INNODB_STATUS.sql"
   else  
     local STATUS=$($CMD_MARIADB $CLOPTS -Ae "$SQL")
     printf "\"$RUNID\"\t\"$STATUS\"" > $OUTFILE
-    # IN THEORY, THERE DOES NOT EXIST A CASE IN WHICH REMOTE DB CREATES AN INACCESSIBLE OUTFILE.
-    # SO THIS MESSAGE SHOULD NEVER APPEAR BECAUSE IF REMOTE, CLIENT_SIDE='TRUE':
-    if [ "$OUT_TO_FILES" == "TRUE" ] && [ ! "$CLIENT_SIDE" == 'TRUE' ] && [ ! -f "$OUTFILE" ] && [ ! "$DEBUG_SQL" == 'TRUE' ]; then echo "FILE WRITTEN ON DATABASE HOST: $OUTFILE"; fi
-    if [ "$OUT_TO_FILES" == "TRUE" ] && [ -f "$OUTFILE" ]; then echo "FILE WRITTEN: $OUTFILE"; fi
-
-    if [ "$DEBUG_OUTFILE" == "TRUE" ] && [ -f "$OUTFILE" ]; then
-      cat $OUTFILE
-    fi 
+    display_file_written_message 
   fi
 }
 
@@ -243,15 +383,35 @@ function record_slave_status(){
 	local LAST_IO_ERROR=$(printf "$STATUS\n" | grep -i Last_IO_Error | sed 's/.*Last_IO_Error://' | sed 's|["'\'']||g')
     local BEHIND_MASTER=$(printf "$STATUS\n" | grep -i Seconds_Behind_Master | awk '{print $2}')
     printf "$SUBROUTINE\t$DT\t$HOSTNAME\t$BEHIND_MASTER\t$GTID_IO_POS\t$GTID_SLAVE_POS\t$RUNNING_STATE\t$LAST_SQL_ERROR\t$LAST_IO_ERROR\n" > $OUTFILE
-    # IN THEORY, THERE DOES NOT EXIST A CASE IN WHICH REMOTE DB CREATES AN INACCESSIBLE OUTFILE.
-    # SO THIS MESSAGE SHOULD NEVER APPEAR BECAUSE IF REMOTE, CLIENT_SIDE='TRUE':
-    if [ "$OUT_TO_FILES" == "TRUE" ] && [ ! "$CLIENT_SIDE" == 'TRUE' ] && [ ! -f "$OUTFILE" ] && [ ! "$DEBUG_SQL" == 'TRUE' ]; then echo "FILE WRITTEN ON DATABASE HOST: $OUTFILE"; fi
-    if [ "$OUT_TO_FILES" == "TRUE" ] && [ -f "$OUTFILE" ]; then echo "FILE WRITTEN: $OUTFILE"; fi
-
-    if [ "$DEBUG_OUTFILE" == "TRUE" ] && [ -f "$OUTFILE" ]; then
-      cat $OUTFILE
-    fi 
+    display_file_written_message
   fi
+}
+
+function set_log_error() {
+  unset DATADIR LOG_ERROR 
+  if [ ! "$DB_IS_LOCAL" == 'TRUE' ]; then return; fi
+  if [ $CAN_CONNECT ]; then
+    LOG_ERROR=$($CMD_MARIADB $CLOPTS  -ABNe "select @@log_error")
+    DATADIR=$($CMD_MARIADB $CLOPTS  -ABNe "select @@datadir" | sed 's:/*$::')
+  else
+    LOG_ERROR=$(my_print_defaults --mysqld| grep log_error | tail -1 | cut -d "=" -f2)
+    DATADIR=$(my_print_defaults --mysqld| grep datadir | tail -1 | cut -d "=" -f2 | sed 's:/*$::')
+  fi
+  if [ -z "$LOG_ERROR" ]; then unset LOG_ERROR; return; fi;
+  if [[ $LOG_ERROR =~ ^/.* ]]; then local FULL_PATH=true; fi
+
+  if [ ! $FULL_PATH ]; then
+    LOG_ERROR=$(basename $LOG_ERROR)
+    LOG_ERROR=$DATADIR/$LOG_ERROR
+  fi
+}
+
+function is_userstat_enabled (){
+  local SQL_FILE="$SQL_DIR/IS_USERSTAT_ENABLED.sql"
+  local SQL=$(cat $SQL_FILE)
+  # YOU CANNOT DEBUG_SQL HERE BECAUSE THIS EFFECTS SQL TEXT, SO IT MUST BE RUN
+  local USERSTAT=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
+  if [ "$USERSTAT" == 'YES' ]; then USERSTAT_ENABLED='TRUE'; fi
 }
 
 function mk_tmpdir() {

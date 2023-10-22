@@ -1,0 +1,7 @@
+# INDEX_STATISTICS
+[mariadb-import]
+fields-terminated-by = '\t'
+lines-terminated-by = '\n'
+fields-escaped-by = '\\'
+columns = 'RUN_ID,TABLE_SCHEMA,TABLE_NAME,INDEX_NAME,ROWS_READ'
+

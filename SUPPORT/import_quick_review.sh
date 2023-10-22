@@ -55,6 +55,19 @@ import_from_file SLAVE_STATUS
 import_from_file TABLE_KEY_COUNTS
 import_from_file PLUGINS
 import_from_file ENGINE_INNODB_STATUS
+import_from_file OPEN_TABLES
+import_from_file SLAVE_HOSTS
+import_from_file MYSQL_TOP
+import_from_file DF
+import_from_file MACHINE_ARCHITECTURE
+import_from_file CPU_INFO
+import_from_file MEMORY_INFO
+import_from_file DISKS
+import_from_file USER_STATISTICS
+import_from_file CLIENT_STATISTICS
+import_from_file INDEX_STATISTICS
+import_from_file TABLE_STATISTICS
+import_from_file RECENT_ERRORS
 
 post_import
 

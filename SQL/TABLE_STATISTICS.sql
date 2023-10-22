@@ -1,0 +1,11 @@
+-- DISTRIBUTED WITH mariadb_quick_review by Edward Stoever for MariaDB Support
+-- TABLE_STATISTICS
+
+SELECT '$RUNID' as RUN_ID,
+TABLE_SCHEMA,
+TABLE_NAME,
+ROWS_READ,
+ROWS_CHANGED,
+ROWS_CHANGED_X_INDEXES
+from information_schema.TABLE_STATISTICS 
+

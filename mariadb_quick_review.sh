@@ -6,12 +6,12 @@
 ### FOR FULL INSTRUCTIONS: README.md
 ### FOR BRIEF INSTRUCTIONS: ./mariadb_quick_review.sh --help
 
-SCRIPT_VERSION='1.0.2'
+SCRIPT_VERSION='1.0.4'
 # Establish working directory and source pre_quick_review.sh
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source ${SCRIPT_DIR}/pre_quick_review.sh
 
-
+display_title;
 start_message;
 
 
@@ -56,7 +56,24 @@ run_sql PLUGINS
 if [ ! "$MULTI_PROCESSLIST" == 'TRUE' ]; then
   run_sql PROCESSLIST
 fi
+if [ "$IS_PRIMARY" == 'YES' ]; then
+  record_slave_hosts SLAVE_HOSTS
+fi
+
+is_userstat_enabled
+if [ "$USERSTAT_ENABLED" == 'TRUE' ]; then
+  run_sql CLIENT_STATISTICS
+  run_sql USER_STATISTICS
+  run_sql INDEX_STATISTICS
+  run_sql TABLE_STATISTICS
+fi
+
 record_engine_innodb_status ENGINE_INNODB_STATUS
+record_disks DISKS
+record_df DF
+record_machine_architecture MACHINE_ARCHITECTURE
+record_cpu_info CPU_INFO
+record_memory_info MEMORY_INFO
 
 # CURRENT_RUN is collected just one time, and in the PERF STATS loop. If no perf stats loop, collect it here:
 if [ "$MINS" == "0" ]; then
@@ -98,6 +115,7 @@ fi
 if [ "$MULTI_PROCESSLIST" == 'TRUE' ]; then
   run_sql PROCESSLIST "PROCESSLIST.$SUBROUTINE"
 fi
+record_open_tables OPEN_TABLES "OPEN_TABLES.$SUBROUTINE"
 run_sql GTID_POSITIONS "GTID_POSITIONS.$SUBROUTINE"
 run_sql SERVER_PERFORMANCE "SERVER_PERFORMANCE.$SUBROUTINE"
 run_sql PERFORMANCE_WARNINGS "PERFORMANCE_WARNINGS.$SUBROUTINE"
@@ -109,6 +127,8 @@ fi
 if [ "$IS_REPLICA" == "YES" ] && [ "$SLAVES_RUNNING" == "1" ]; then # can only do this if there is only one slave running
   record_slave_status "SLAVE_STATUS.$SUBROUTINE"
 fi
+
+record_mysql_top "MYSQL_TOP.$SUBROUTINE"
 
 if [ $INDEX -eq $MAX_INDEX ]; then MINS_REMAINING=$((MINS_REMAINING - 1)); fi
 # echo "DEBUG: $(date +%S) ${STATS_ON_SEC[${MAX_INDEX}]} $MINS_REMAINING $ii $DEBUG_SQL"
@@ -122,5 +142,6 @@ if [ $MAX_INDEX -eq 0 ] && [ $MINS_REMAINING -ne 0 ]; then
 fi # NO PER-MINUTE PERFORMANCE STAT COLLECTION MUST SLEEP OR LOOP WILL HAPPEN MULTIPLE TIMES IN FIRST SECOND
 
 done
-
+set_log_error;
+record_recent_errors RECENT_ERRORS
 compress_file;

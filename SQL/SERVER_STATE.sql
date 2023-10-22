@@ -57,7 +57,7 @@ select VARIABLE_VALUE into @EVENT_SCHED
   where VARIABLE_NAME='EVENT_SCHEDULER';
 
 
-SELECT 1 as `SECTION`, concat('SCRIPT VERSION') as `ITEM`, concat('$SCRIPT_VERSION') as `STATUS` from information_schema.SCHEMATA where SCHEMA_NAME='information_schema'
+SELECT 1 as `SECTION`, concat('MARIADB QUICK REVIEW VERSION') as `ITEM`, concat('$SCRIPT_VERSION') as `STATUS` from information_schema.SCHEMATA where SCHEMA_NAME='information_schema'
 UNION ALL
 SELECT 1 as `SECTION`, concat('REVIEW STARTS'), cast(now() as char) from information_schema.SCHEMATA where SCHEMA_NAME='information_schema'
 UNION ALL

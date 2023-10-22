@@ -107,11 +107,13 @@ function post_import() {
 
 function import_from_file(){
   TABLE_NAME=$1
-
+# echo $1
 # .out
 local EXIST_OUT=$(find $PT_TMPDIR/ -name "${TABLE_NAME}*.out" ! -size 0 |head -1)
 if [ $EXIST_OUT ]; then
-  TEMP_COLOR=lcyan; print_color "Importing out file(s): $TABLE_NAME\n"; unset TEMP_COLOR;
+    TEMP_COLOR=lcyan; print_color "Importing "; 
+	TEMP_COLOR=lgreen; print_color "out"; 
+	TEMP_COLOR=lcyan; print_color " file(s): $TABLE_NAME\n"; unset TEMP_COLOR;
 fi
 for IMPORTFILE in $(find $PT_TMPDIR/ -name "${TABLE_NAME}*.out" ! -size 0 | sort)
 do
@@ -122,7 +124,9 @@ if [ ! "$TSV2CSV" == 'TRUE' ]; then
   # .tsv
   local EXIST_TSV=$(find $PT_TMPDIR/ -name "${TABLE_NAME}*.tsv" ! -size 0 |head -1)
   if [ $EXIST_TSV ]; then
-    TEMP_COLOR=lmagenta; print_color "Importing tsv file(s): $TABLE_NAME\n"; unset TEMP_COLOR;
+    TEMP_COLOR=lcyan; print_color "Importing "; 
+	TEMP_COLOR=lyellow; print_color "tsv"; 
+	TEMP_COLOR=lcyan; print_color " file(s): $TABLE_NAME\n"; unset TEMP_COLOR;
   fi
   for IMPORTFILE in $(find $PT_TMPDIR/ -name "${TABLE_NAME}*.tsv" ! -size 0 | sort)
   do
