@@ -1,4 +1,4 @@
-# MARIADB QUICK REVIEW
+# Mariadb Quick Review
 
 To download the mariadb_quick_review script direct to your linux server, you may use git or wget:
 ```
