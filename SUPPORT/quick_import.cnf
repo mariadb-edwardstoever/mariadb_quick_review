@@ -5,19 +5,17 @@
 # If none are specified, the script will attempt a socket connection from 
 # unix account, such as root@localhost.
 
-# The group name must be [mariadb_quick_review]
-[mariadb_quick_review]
-# user = dbpgf21089765
-# password = "QeJHj74YS+n0hA13zGtM2O"
-# host = mindapp.ha.db7.mariadb.com
+# FOR IMPORT OF QUICK REVIEW FILES,
+# SCRIPT MUST BE RUN ON HOST OF DATABASE
+
+# The group name must be [quick_review_import]
+[quick_review_import]
+# user = edward
+# password = "password"
+# host = localhost
 # port = 3306
 # socket = /run/mysqld/mysqld.sock
 # ssl-cert = /etc/mysql/client-cert.pem
 # ssl-key  = /etc/mysql/client-key.pem
 # ssl-verify-server-cert = on
 # ssl-ca = /etc/ssl/certs/skysql_chain_2022.pem
-
-user = edward
-password = password
-host = 192.168.8.158
-

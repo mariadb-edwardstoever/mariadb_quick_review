@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # import_quick_review.sh
 # By Edward Stoever for MariaDB Support
 
@@ -6,40 +6,25 @@
 ### FOR FULL INSTRUCTIONS: README.md
 ### FOR BRIEF INSTRUCTIONS: ./import_quick_review.sh --help
 
-SCRIPT_VERSION='1.0.2'
 # Establish working directory and source pre_import.sh
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source ${SCRIPT_DIR}/current_import_vsn.sh
 source ${SCRIPT_DIR}/pre_import.sh
-
-
-for params in "$@"; do
-unset VALID; #REQUIRED
-# echo "PARAMS: $params"
-if [ $(echo "$params"|sed 's,=.*,,') == '--schema' ]; then 
-  SCHEMA_NAME=$(echo "$params" | sed 's/.*=//g'); 
-  if [ $(echo $SCHEMA_NAME | awk '{ if(int($1)==$1) print $1}') ]; then 
-   INVALID_INPUT="$params"; 
-  else 
-   VALID=TRUE; 
-  fi
-fi
-  if [ "$params" == '--tsv2csv' ]; then TSV2CSV='TRUE'; VALID=TRUE; fi
-  if [ "$params" == '--version' ]; then DISPLAY_VERSION=TRUE; VALID=TRUE; fi
-  if [ "$params" == '--help' ]; then HELP=TRUE; VALID=TRUE; fi
-  if [ ! $VALID ] && [ ! $INVALID_INPUT ];  then  INVALID_INPUT="$params"; fi
-done
-if [ $INVALID_INPUT ]; then display_help_message; die "Invalid parameter: $INVALID_INPUT"; fi
-if [ $DISPLAY_VERSION ]; then exit 0; fi
-if [ $HELP ]; then display_help_message; exit 0; fi
-
-
-# mkdir -p $SCRIPT_DIR/INPUT
-# rm -f $SCRIPT_DIR/INPUT/*.out $SCRIPT_DIR/INPUT/*.tsv $SCRIPT_DIR/INPUT/*.csv || die "Failed to remove old input files in $SCRIPT_DIR/INPUT/"
-
+test_dependencies
 ensure_media_file;
 set_runid;
 mk_tmpdir;
 uncompress_media_file;
+if [ -f ${QK_TMPDIR}/vsn.sh ]; then source ${QK_TMPDIR}/vsn.sh; fi
+
+display_title;
+can_connect;
+is_db_localhost;
+whoami_db;
+check_required_privs;
+if [ "$DISPLAY_VERSION" ]; then exit 0; fi
+
+interactive_schema_exists;
 create_schema;
 import_from_file CURRENT_RUN
 import_from_file GLOBAL_STATUS
@@ -68,8 +53,18 @@ import_from_file CLIENT_STATISTICS
 import_from_file INDEX_STATISTICS
 import_from_file TABLE_STATISTICS
 import_from_file RECENT_ERRORS
+import_from_file FILE_SUMMARY_BY_INSTANCE
+import_from_file TABLE_IO_WAITS_SUMMARY_BY_INDEX_USAGE
+import_from_file TABLE_IO_WAITS_SUMMARY_BY_TABLE
+import_from_file ACCOUNTS
+import_from_file EVENTS_STATEMENTS_SUMMARY_BY_USER_BY_EVENT_NAME
+import_from_file EVENTS_WAITS_SUMMARY_BY_USER_BY_EVENT_NAME
+import_from_file EVENTS_WAITS_SUMMARY_GLOBAL_BY_EVENT_NAME
 
-post_import
+post_import;
+log_files_provided;
+
+echo 
 
 exit 0
 

@@ -1,0 +1,7 @@
+# EVENTS_WAITS_SUMMARY_BY_USER_BY_EVENT_NAME
+[mariadb-import]
+fields-terminated-by = ','
+fields-optionally-enclosed-by = '"'
+lines-terminated-by = '\n'
+fields-escaped-by = '\\'
+columns = 'RUN_ID,USER,EVENT_NAME,COUNT_STAR,SUM_TIMER_WAIT,MIN_TIMER_WAIT,AVG_TIMER_WAIT,MAX_TIMER_WAIT'

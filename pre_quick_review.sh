@@ -7,7 +7,7 @@ TEMPDIR="/tmp"
 CONFIG_FILE="$SCRIPT_DIR/quick_review.cnf"
 SQL_DIR="$SCRIPT_DIR/SQL"
 TOOL="mariadb_quick_review"
-PT_TMPDIR="/PATH/TO"
+QK_TMPDIR="/PATH/TO"
 SLAVES_RUNNING=0; # DEFAULT
 OUT_TO_FILES='TRUE' # DEFAULT
 MINS=5 #DEFAULT
@@ -19,6 +19,7 @@ printf "This script can be run without options. Not indicating an option value w
   --minutes=10         # indicate the number of minutes to collect performance statistics, default 5
   --stats_per_min=2    # indicate the number of times per minute to collect performance statistics, default 1
                        # Valid values for stats_per_min: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60
+  --logs               # Include database error logs and system logs in archive for support ticket.
   --multi_processlist  # Turns on collecting processlist with each statistics collection. Turned off by default.
   --test               # Test connect to database and display script version
   --version            # Test connect to database and display script version
@@ -48,11 +49,11 @@ function display_title(){
 
 function is_primary(){
   local SQL_FILE="$SQL_DIR/IS_PRIMARY.sql"
-  local QSQL=$(cat $SQL_FILE)
+  local SQL=$(cat $SQL_FILE)
   if [ "$DEBUG_SQL" == "TRUE" ] ; then
-    echo "$QSQL"; echo; echo;
+    echo "$SQL"; echo; echo;
   else
-    IS_PRIMARY=$($CMD_MARIADB $CLOPTS -ABNe "$QSQL");
+    IS_PRIMARY=$($CMD_MARIADB $CLOPTS -ABNe "$SQL");
     if [ "$IS_PRIMARY" == "YES" ]; then
       printf "IS PRIMARY: "; TEMP_COLOR=lcyan; print_color "YES\n"; unset TEMP_COLOR;
     else
@@ -61,24 +62,35 @@ function is_primary(){
   fi
 }
 
+function stop_here_if_necessary(){
+if [ $INVALID_INPUT ]; then display_help_message; die "Invalid option: $INVALID_INPUT"; fi
+if [ $HELP ]; then display_help_message; exit 0; fi
+if [ ! $CAN_CONNECT ]; then 
+  TEMP_COLOR=lred; print_color "Failing command: ";unset TEMP_COLOR; 
+  TEMP_COLOR=lyellow; print_color "$CMD_MARIADB $CLOPTS\n";unset TEMP_COLOR; 
+  ERRTEXT=$($CMD_MARIADB $CLOPTS -e "select now();" 2>&1); TEMP_COLOR=lcyan; print_color "$ERRTEXT\n";unset TEMP_COLOR;
+  die "Database connection failed. Read the file README.md. Edit the file quick_review.cnf."; 
+fi
+}
+
 function whoami_db(){
   local SQL_FILE="$SQL_DIR/WHOAMI_DB.sql"
-  local QSQL=$(cat $SQL_FILE)
+  local SQL=$(cat $SQL_FILE)
   if [ "$DEBUG_SQL" == "TRUE" ] ; then
-    echo "$QSQL"; echo; echo;
+    echo "$SQL"; echo; echo;
   else
-    WHOAMI_DB=$($CMD_MARIADB $CLOPTS -ABNe "$QSQL")
+    WHOAMI_DB=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
     printf "DB account:    "; TEMP_COLOR=lmagenta; print_color "$WHOAMI_DB\n"; unset TEMP_COLOR;
   fi
 }
 
 function is_replica(){
   local SQL_FILE="$SQL_DIR/IS_REPLICA.sql"
-  local QSQL=$(cat $SQL_FILE)
+  local SQL=$(cat $SQL_FILE)
     if [ "$DEBUG_SQL" == "TRUE" ] ; then
-    echo "$QSQL"; echo; echo;
+    echo "$SQL"; echo; echo;
   else
-    IS_REPLICA=$($CMD_MARIADB $CLOPTS -ABNe "$QSQL");
+    IS_REPLICA=$($CMD_MARIADB $CLOPTS -ABNe "$SQL");
     if [ "$IS_REPLICA" == "YES" ]; then
       printf "IS REPLICA: "; TEMP_COLOR=lcyan; print_color "YES\n"; unset TEMP_COLOR;
     else
@@ -89,21 +101,21 @@ function is_replica(){
 
 function slaves_running(){
   local SQL_FILE="$SQL_DIR/SLAVES_RUNNING.sql"
-  local QSQL=$(cat $SQL_FILE)
+  local SQL=$(cat $SQL_FILE)
   if [ "$DEBUG_SQL" == "TRUE" ] ; then
-  echo "$QSQL"; echo; echo;
+  echo "$SQL"; echo; echo;
   else
-    SLAVES_RUNNING=$($CMD_MARIADB $CLOPTS -ABNe "$QSQL");
+    SLAVES_RUNNING=$($CMD_MARIADB $CLOPTS -ABNe "$SQL");
   fi
 }
 
 function is_galera(){
   local SQL_FILE="$SQL_DIR/IS_GALERA.sql"
-  local QSQL=$(cat $SQL_FILE)
+  local SQL=$(cat $SQL_FILE)
   if [ "$DEBUG_SQL" == "TRUE" ] ; then
-    echo "$QSQL"; echo; echo; 
+    echo "$SQL"; echo; echo; 
   else
-    IS_GALERA=$($CMD_MARIADB $CLOPTS -ABNe "$QSQL");
+    IS_GALERA=$($CMD_MARIADB $CLOPTS -ABNe "$SQL");
     if [ "$IS_GALERA" == "YES" ]; then
       printf "IS GALERA: "; TEMP_COLOR=lcyan; print_color "YES\n"; unset TEMP_COLOR;
     else
@@ -113,6 +125,7 @@ function is_galera(){
 }
 
 function display_stats_collection() {
+if [ ! $PER_MIN ]; then PER_MIN=1; STATS_ON_SEC=("00"); fi # DEFAULT, ALSO USED BY display_stats_collection
 if [ ! $DISPLAY_VERSION ]; then
   printf "PERF STATS: "; TEMP_COLOR=lmagenta; print_color "Will collect $((MINS * PER_MIN)) times during $MINS $(singular_plural minute $MINS)."; unset TEMP_COLOR;
 fi
@@ -136,13 +149,17 @@ function check_required_privs() {
 
 function is_db_localhost(){
   local SQL_FILE="$SQL_DIR/IS_DB_LOCALHOST.sql"
-  local QSQL=$(cat $SQL_FILE)
+  local SQL=$(cat $SQL_FILE)
   # YOU CANNOT DEBUG_SQL HERE BECAUSE THIS EFFECTS SQL TEXT, SO IT MUST BE RUN
-    DBHOST=$($CMD_MARIADB $CLOPTS -ABNe "$QSQL")
+    DBHOST=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
     CLIENTHOST=$(hostname)
     if [ ! "$DBHOST" == "$CLIENTHOST" ]; then CLIENT_SIDE='TRUE'; else DB_IS_LOCAL='TRUE'; fi
       printf "Database Host: "; TEMP_COLOR=lmagenta; print_color "$DBHOST\n"; unset TEMP_COLOR;
       printf "Client Host:   "; TEMP_COLOR=lmagenta; print_color "$CLIENTHOST\n"; unset TEMP_COLOR;
+	  if [ ! $DB_IS_LOCAL ]; then
+         printf "Notice:        ";TEMP_COLOR=lred;  print_color "Database is remote. Data regarding host will not be collected.\n";unset TEMP_COLOR;
+		 if [ $COLLECT_LOGS ]; then die "It is not possible to collect logs on a remote host."; fi
+	  fi
 }
 
 
@@ -181,15 +198,15 @@ function run_sql() {
   local SQL_FILE="$SQL_DIR/$1.sql"
   if [ ! "$CLIENT_SIDE" == 'TRUE' ]; then
     if [ ! $2 ]; then
-      OUTFILE="$PT_TMPDIR/$1.out"; ENCLOSURE='';
+      OUTFILE="$QK_TMPDIR/$1.out"; ENCLOSURE='';
     else
-      OUTFILE="$PT_TMPDIR/$2.out"; ENCLOSURE=''; 
+      OUTFILE="$QK_TMPDIR/$2.out"; ENCLOSURE=''; 
     fi
   else
     if [ ! $2 ]; then
-      OUTFILE="$PT_TMPDIR/$1.tsv"; ENCLOSURE='"'; 
+      OUTFILE="$QK_TMPDIR/$1.tsv"; ENCLOSURE='"'; 
     else
-      OUTFILE="$PT_TMPDIR/$2.tsv"; ENCLOSURE='"'; 
+      OUTFILE="$QK_TMPDIR/$2.tsv"; ENCLOSURE='"'; 
     fi
   fi
   CLIENT_DT="$(date +"%Y-%m-%d %H:%M:%S")"; CLIENT_HOST="$(hostname)"; CLIENT_OS_ACCT=$(whoami)
@@ -220,7 +237,7 @@ function run_sql() {
 
 function record_disks (){
 local SQL_FILE="$SQL_DIR/DISKS.sql"
-  local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv because logic in SQL prevents SELECT INTO OUTFILE
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because logic in SQL prevents SELECT INTO OUTFILE
   local SQL=$(cat $SQL_FILE)
   if [ "$DEBUG_SQL" == "TRUE" ] ; then
     echo "$SQL"; echo; echo;
@@ -235,9 +252,9 @@ local SQL_FILE="$SQL_DIR/DISKS.sql"
 
 function record_mysql_top(){
 if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
-local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv 
+local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
 if [ "$(id --user $MARIADB_PROCESS_OWNER  2>/dev/null)" ] && [ "$DB_IS_LOCAL" == 'TRUE' ]; then
-  TOP="$(top -bc -n1 -u ${MARIADB_PROCESS_OWNER} 2>/dev/null)"
+  TOP="$(top -b -n1 -u ${MARIADB_PROCESS_OWNER} 2>/dev/null)"
   if [ ! -z "$TOP" ]; then 
     printf '%b\n' "\"$SUBROUTINE\"\t\"$TOP\"" > $OUTFILE
   else
@@ -249,7 +266,7 @@ fi
 
 function record_df(){
 if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
-local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv 
+local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
 if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
   local DF="$(df -h 2>/dev/null)"
   if [ ! -z "$DF" ]; then 
@@ -263,7 +280,7 @@ fi
 
 function record_memory_info(){
 if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
-local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv 
+local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
 if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
   local MEMINFO=$(free -h 2>/dev/null)
 
@@ -278,7 +295,7 @@ fi
 
 function record_cpu_info(){
 if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
-local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv 
+local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
 if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
   local CPUINFO=$(lscpu | grep -E "(op-mode|ddress|hread|ocket|name|MHz|vendor|cache)" 2>/dev/null)
 
@@ -293,7 +310,7 @@ fi
 
 function record_machine_architecture(){
 if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
-local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv 
+local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
 if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
    if [ "$(grep docker /proc/1/cgroup 2>/dev/null)" ]; then
      local ARCH="Docker Container"
@@ -315,17 +332,17 @@ fi
 function record_recent_errors(){
 if [ ! "$DB_IS_LOCAL" == 'TRUE' ]; then return; fi
 if [ ! -f "$LOG_ERROR" ] ; then return; fi
-local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv 
+local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
 RECENT=$(tail -200000 $LOG_ERROR | grep -i "\[ERROR\]")
  while IFS= read -r line; do
-   if [ ! -z "$line" ]; then printf "$RUNID\t\"$line\"\n" >> $OUTFILE; else touch $OUTFILE; fi
+   if [ ! -z "$line" ]; then line=$(echo ${line} | sed 's|["'\'']||g'); printf "$RUNID\t\"$line\"\n" >> $OUTFILE; else touch $OUTFILE; fi
  done <<< "$RECENT"
  display_file_written_message
 }
 
 function record_slave_hosts (){
 local SQL_FILE="$SQL_DIR/SLAVE_HOSTS.sql"
-  local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
   local SQL=$(cat $SQL_FILE)
   if [ "$DEBUG_SQL" == "TRUE" ] ; then
     echo "$SQL"; echo; echo;
@@ -340,7 +357,7 @@ local SQL_FILE="$SQL_DIR/SLAVE_HOSTS.sql"
 
 function record_open_tables (){
 local SQL_FILE="$SQL_DIR/OPEN_TABLES.sql"
-  local OUTFILE="$PT_TMPDIR/$2.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
+  local OUTFILE="$QK_TMPDIR/$2.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
   local SQL=$(cat $SQL_FILE)
   if [ "$DEBUG_SQL" == "TRUE" ] ; then
     echo "$SQL"; echo; echo;
@@ -355,7 +372,7 @@ local SQL_FILE="$SQL_DIR/OPEN_TABLES.sql"
 
 function record_engine_innodb_status (){
 local SQL_FILE="$SQL_DIR/ENGINE_INNODB_STATUS.sql"
-  local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
   local SQL=$(cat $SQL_FILE)
   if [ "$DEBUG_SQL" == "TRUE" ] ; then
     echo "$SQL"; echo; echo;
@@ -368,7 +385,7 @@ local SQL_FILE="$SQL_DIR/ENGINE_INNODB_STATUS.sql"
 
 function record_slave_status(){
   local SQL_FILE="$SQL_DIR/SLAVE_STATUS.sql"
-  local OUTFILE="$PT_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
   local SQL=$(cat $SQL_FILE)
   if [ "$DEBUG_SQL" == "TRUE" ] ; then
     echo "$SQL"; echo; echo;
@@ -406,6 +423,37 @@ function set_log_error() {
   fi
 }
 
+function collect_logs() {
+if [ ! $COLLECT_LOGS ]; then return; fi
+if [ ! $LOG_ERROR ]; then return; fi
+  mkdir -p $QK_TMPDIR/logs/system
+  mkdir -p $QK_TMPDIR/logs/mariadb
+  mkdir -p $QK_TMPDIR/logs/systemd
+
+    OUTFILE=$QK_TMPDIR/logs/mariadb/$(hostname)_$(date +"%Y-%m-%d-%H-%M-%S")_$(basename $LOG_ERROR)
+    FILTEREDFILE=$QK_TMPDIR/logs/mariadb/$(hostname)_$(date +"%Y-%m-%d-%H-%M-%S")_filtered_$(basename $LOG_ERROR)
+    if [ -f $LOG_ERROR ]; then
+      tail -100000 $LOG_ERROR > $OUTFILE
+    fi
+    if [ -f $LOG_ERROR ]; then
+      tail -1000000 $LOG_ERROR | grep -iv "\[warning\]"|grep -iv "\[note\]"  > $FILTEREDFILE
+    fi
+
+  cp /var/log/messages* $QK_TMPDIR/logs/system
+  find /var/log/syslog -name syslog -type f -exec tail -10000 {} > $QK_TMPDIR/logs/system/syslog \;
+  find /var/log/daemon.log -name daemon.log -type f -exec tail -10000 {} > $QK_TMPDIR/logs/system/daemon.log \;
+
+  find /usr/lib -name "mariadb*service" -exec cp {} $QK_TMPDIR/logs/systemd \;
+
+  my_print_defaults --mysqld > $QK_TMPDIR/logs/mariadb/$(hostname)_my_print_defaults.txt 2>/dev/null 
+  if [ -f $OUTFILE ]; then printf "LOGS COLLECTED\n"; fi
+}
+
+function post_version() {
+# to inform importer script which script version was used to create the data
+  cp ${SCRIPT_DIR}/vsn.sh ${QK_TMPDIR}/vsn.sh
+}
+
 function is_userstat_enabled (){
   local SQL_FILE="$SQL_DIR/IS_USERSTAT_ENABLED.sql"
   local SQL=$(cat $SQL_FILE)
@@ -414,13 +462,22 @@ function is_userstat_enabled (){
   if [ "$USERSTAT" == 'YES' ]; then USERSTAT_ENABLED='TRUE'; fi
 }
 
+function is_performance_schema_enabled (){
+  local SQL_FILE="$SQL_DIR/IS_PERFORMANCE_SCHEMA_ENABLED.sql"
+  local SQL=$(cat $SQL_FILE)
+  # YOU CANNOT DEBUG_SQL HERE BECAUSE THIS EFFECTS SQL TEXT, SO IT MUST BE RUN
+  local PERFSTAT=$($CMD_MARIADB $CLOPTS -ABNe "$SQL"); 
+  if [ "$PERFSTAT" == 'YES' ]; then PERFORMANCE_SCHEMA_ENABLED='TRUE'; fi
+}
+
 function mk_tmpdir() {
+  if [ ! "$OUT_TO_FILES" == "TRUE" ]; then return; fi
   local subdir="${TEMPDIR}/${TOOL}"
   if [ ! $DEBUG_SQL ]; then  mkdir -p ${subdir} 2>/dev/null; fi
   if [ ! $DEBUG_SQL ]; then 
-    PT_TMPDIR="${subdir}/${RUNID}"
-	if [ -d $PT_TMPDIR ]; then die "Directory $PT_TMPDIR already exists."; fi
-    mkdir -p $PT_TMPDIR || die "Cannot make tmpdir"
+    QK_TMPDIR="${subdir}/${RUNID}"
+	if [ -d $QK_TMPDIR ]; then die "Directory $QK_TMPDIR already exists."; fi
+    mkdir -p $QK_TMPDIR || die "Cannot make tmpdir"
   fi
   if [ "$(id --user $MARIADB_PROCESS_OWNER  2>/dev/null)" ] && [ ! "$CLIENT_SIDE" == 'TRUE' ]; then
     chown -R ${MARIADB_PROCESS_OWNER}:${MARIADB_PROCESS_OWNER} ${subdir}
@@ -447,16 +504,35 @@ function _which() {
    fi
 }
 
+function dependency(){
+  if [ ! $(_which $1) ]; then die "The linux program $1 is unavailable. Check PATH or install."; fi
+}
+
+function test_dependencies(){
+  dependency which
+  dependency tar
+  dependency df 
+  dependency top
+  dependency free
+  dependency awk
+  dependency sed
+  dependency envsubst
+  dependency cut
+  dependency base64
+  dependency head
+  dependency id
+  dependency whoami
+}
+
 function compress_file(){
   if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
-  if [ ! -d $PT_TMPDIR ]; then die "Directory $PT_TMPDIR does not exist."; fi
-  COMPRESSFILE=$(dirname $PT_TMPDIR)/${RUNID}_$(hostname)_$(date +"%b-%d").tar.gz
-  cd $PT_TMPDIR
+  if [ ! -d $QK_TMPDIR ]; then die "Directory $QK_TMPDIR does not exist."; fi
+  COMPRESSFILE=$(dirname $QK_TMPDIR)/${RUNID}_$(hostname)_$(date +"%b-%d").tar.gz
+  cd $QK_TMPDIR
   tar -czf /$COMPRESSFILE ./*
  TEMP_COLOR=lmagenta; print_color "Attach file $COMPRESSFILE to your support ticket.\n"; unset TEMP_COLOR;
 }
 
-# print_color is borrowed from columnstore_review.sh
 function print_color () {
   if [ -z "$COLOR" ] && [ -z "$TEMP_COLOR" ]; then printf "$1"; return; fi
   case "$COLOR" in
@@ -506,23 +582,6 @@ function singular_plural () {
   printf "%s" "$noun"  
 }
 
-if [ $(which mariadb 2>/dev/null) ]; then
-  CMD_MARIADB="${CMD_MARIADB:-"$(_which mariadb)"}"
-else
-  CMD_MARIADB="${CMD_MYSQL:-"$(_which mysql)"}"
-fi
-
-CMD_MY_PRINT_DEFAULTS="${CMD_MY_PRINT_DEFAULTS:-"$(_which my_print_defaults)"}"
-
-if [ -z $CMD_MARIADB ]; then
-  die "mariadb client command not available."
-fi
-
-if [ -z $CMD_MY_PRINT_DEFAULTS ]; then
-  die "my_print_defaults command not available."
-fi
-
-CLOPTS=$($CMD_MY_PRINT_DEFAULTS --defaults-file=$CONFIG_FILE mariadb_quick_review | sed -z -e "s/\n/ /g")
 
 for params in "$@"; do
 unset VALID; #REQUIRED
@@ -559,6 +618,7 @@ fi
   if [ "$params" == '--multi_processlist' ]; then MULTI_PROCESSLIST='TRUE'; VALID=TRUE; fi
   if [ "$params" == '--no_outfiles' ]; then OUT_TO_FILES='FALSE'; VALID=TRUE; fi
   if [ "$params" == '--client_side_outfiles' ]; then CLIENT_SIDE='TRUE'; VALID=TRUE; fi  
+  if [ "$params" == '--logs' ]; then COLLECT_LOGS=TRUE; VALID=TRUE; fi
   if [ "$params" == '--debug_sql' ]; then DEBUG_SQL='TRUE'; VALID=TRUE; fi
   if [ "$params" == '--debug_outfiles' ]; then DEBUG_OUTFILE='TRUE'; VALID=TRUE; fi
   if [ "$params" == '--bypass_priv_check' ]; then BYPASS_PRIV_CHECK='TRUE'; VALID=TRUE; fi
@@ -567,3 +627,21 @@ fi
   if [ "$params" == '--help' ]; then HELP=TRUE; VALID=TRUE; fi
   if [ ! $VALID ] && [ ! $INVALID_INPUT ];  then  INVALID_INPUT="$params"; fi
 done
+
+if [ $(_which mariadb 2>/dev/null) ]; then
+  CMD_MARIADB="${CMD_MARIADB:-"$(_which mariadb)"}"
+else
+  CMD_MARIADB="${CMD_MYSQL:-"$(_which mysql)"}"
+fi
+
+CMD_MY_PRINT_DEFAULTS="${CMD_MY_PRINT_DEFAULTS:-"$(_which my_print_defaults)"}"
+
+if [ -z $CMD_MARIADB ]; then
+  die "mariadb client command not available."
+fi
+
+if [ -z $CMD_MY_PRINT_DEFAULTS ]; then
+  die "my_print_defaults command not available."
+fi
+
+CLOPTS=$($CMD_MY_PRINT_DEFAULTS --defaults-file=$CONFIG_FILE mariadb_quick_review | sed -z -e "s/\n/ /g")
