@@ -1,6 +1,0 @@
-# REVIEW_WARNINGS
-[mariadb-import]
-fields-terminated-by = '\t' 
-lines-terminated-by = '\n' 
-fields-escaped-by = '\\'    
-columns = 'RUN_ID,TICK,HOSTNAME,ITEM,STATUS,INFO'

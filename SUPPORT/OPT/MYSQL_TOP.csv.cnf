@@ -1,8 +1,0 @@
-# MYSQL_TOP
-[mariadb-import]
-fields-terminated-by = ','
-fields-optionally-enclosed-by = '"'
-lines-terminated-by = '\n'
-fields-escaped-by = '\\'
-columns = 'RUN_ID,TOP'
-

@@ -1,7 +1,0 @@
-# LOW_CARDINALITY_IDX
-[mariadb-import]
-fields-terminated-by = ',' 
-fields-optionally-enclosed-by = '"' 
-lines-terminated-by = '\n' 
-fields-escaped-by = '\\'  
-columns = 'TICK,HOSTNAME,RUN_ID,ITEM,STATUS'

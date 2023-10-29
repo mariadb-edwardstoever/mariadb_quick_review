@@ -1,7 +1,0 @@
-# SERVER_STATE
-[mariadb-import]
-fields-terminated-by = ',' 
-fields-optionally-enclosed-by = '"' 
-lines-terminated-by = '\n' 
-fields-escaped-by = '\\'  
-columns = 'SECTION_ID,ITEM,STATUS'

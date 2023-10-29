@@ -1,8 +1,0 @@
-# TABLE_STATISTICS
-[mariadb-import]
-fields-terminated-by = ',' 
-fields-optionally-enclosed-by = '"' 
-lines-terminated-by = '\n' 
-fields-escaped-by = '\\'  
-columns = 'RUN_ID,TABLE_SCHEMA,TABLE_NAME,ROWS_READ,ROWS_CHANGED,ROWS_CHANGED_X_INDEXES'
-

@@ -1,7 +1,0 @@
-# SLAVE_HOSTS
-[mariadb-import]
-fields-terminated-by = '\t'
-fields-optionally-enclosed-by = '"'
-lines-terminated-by = '\n'
-fields-escaped-by = '\\'
-columns = 'RUN_ID,SERVER_ID,HOST,PORT,MASTER_ID'

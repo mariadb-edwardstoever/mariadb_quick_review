@@ -1,6 +1,0 @@
-# CURRENT_RUN
-[mariadb-import]
-fields-terminated-by = '\t'
-lines-terminated-by = '\n'
-fields-escaped-by = '\\'
-columns = 'RUN_ID,RUN_BY,RUN_ON,RUN_START,CLIENT_HOST,CLIENT_DT,CLIENT_OS_ACCT,IS_PRIMARY,IS_REPLICA,IS_GALERA'

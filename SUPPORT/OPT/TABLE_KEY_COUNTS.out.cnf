@@ -1,7 +1,0 @@
-# TABLE_KEY_COUNTS
-[mariadb-import]
-fields-terminated-by = ',' 
-fields-optionally-enclosed-by = '"' 
-lines-terminated-by = '\n' 
-fields-escaped-by = '\\'  
-columns = 'TABLE_SCHEMA,TABLE_NAME,ENGINE,PRIMARY_KEY_COUNT,UNIQUE_KEY_COUNT,NON_UNIQUE_KEY_COUNT,ROW_FORMAT,TABLE_ROWS,AVG_ROW_LENGTH'
