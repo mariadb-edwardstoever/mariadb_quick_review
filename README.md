@@ -90,7 +90,7 @@ GRANT SELECT, PROCESS on *.* to 'adminuser'@'%';
 GRANT SLAVE MONITOR on *.* to 'adminuser'@'%';
 ```
 ***
-## What information will mariadb_review.sql script provide to MariaDB Support team?
+## What information will Mariadb Quick Review script provide to MariaDB Support team?
 This script will provide the following to **MariaDB support**:
 - General information about the server
 - Topology information such as whether a server is a primary, a replica or a member of a Galera cluster
