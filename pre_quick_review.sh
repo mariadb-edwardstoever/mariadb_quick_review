@@ -21,6 +21,7 @@ printf "This script can be run without options. Not indicating an option value w
                        # Valid values for stats_per_min: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60
   --logs               # Include database error logs and system logs in archive for support ticket.
   --multi_processlist  # Turns on collecting processlist with each statistics collection. Turned off by default.
+  --logs               # Collect database error logs and system logs and include in generated file.
   --test               # Test connect to database and display script version
   --version            # Test connect to database and display script version
   --help               # Display the help menu
