@@ -89,6 +89,10 @@ GRANT SELECT, PROCESS on *.* to 'adminuser'@'%';
 -- IF INSTANCE IS A REPLICATION SLAVE, AN ADDITIONAL PRIVILEGE IS REQUIRED:
 GRANT SLAVE MONITOR on *.* to 'adminuser'@'%';
 ```
+
+#### What will this script do on the database?
+The Mariadb Quick Review script will only run SELECT commands on tables in the information_schema and performance_schema. This script will not create tables, views, schemas, or any other database objects. All of the database commands the script runs can be found in the SQL directory.
+
 ***
 ## What information will Mariadb Quick Review script provide to MariaDB Support team?
 This script will provide the following to **MariaDB support**:
