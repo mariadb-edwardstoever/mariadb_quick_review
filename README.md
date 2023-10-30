@@ -22,6 +22,7 @@ This script can be run without options. Not indicating an option value will use 
   --stats_per_min=2    # indicate the number of times per minute to collect performance statistics, default 1
                        # Valid values for stats_per_min: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60
   --multi_processlist  # Turns on collecting processlist with each statistics collection. Turned off by default.
+  --logs               # Collect database error logs and system logs and include in generated file.
   --test               # Test connect to database and display script version
   --version            # Test connect to database and display script version
   --help               # Display the help menu
