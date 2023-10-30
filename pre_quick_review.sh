@@ -68,7 +68,9 @@ if [ $HELP ]; then display_help_message; exit 0; fi
 if [ ! $CAN_CONNECT ]; then 
   TEMP_COLOR=lred; print_color "Failing command: ";unset TEMP_COLOR; 
   TEMP_COLOR=lyellow; print_color "$CMD_MARIADB $CLOPTS\n";unset TEMP_COLOR; 
-  ERRTEXT=$($CMD_MARIADB $CLOPTS -e "select now();" 2>&1); TEMP_COLOR=lcyan; print_color "$ERRTEXT\n";unset TEMP_COLOR;
+  local SQL_FILE="$SQL_DIR/NOW.sql"
+  local SQL=$(cat $SQL_FILE)
+  ERRTEXT=$($CMD_MARIADB $CLOPTS -e "$SQL" 2>&1); TEMP_COLOR=lcyan; print_color "$ERRTEXT\n";unset TEMP_COLOR;
   die "Database connection failed. Read the file README.md. Edit the file quick_review.cnf."; 
 fi
 }
@@ -133,9 +135,9 @@ fi
 
 function check_required_privs() {
   if [ "$CLIENT_SIDE" == 'TRUE' ]; then
-   SQL_FILE="$SQL_DIR/CLIENT_OUTFILE_PRIVS.sql"
+   local SQL_FILE="$SQL_DIR/CLIENT_OUTFILE_PRIVS.sql"
   else
-   SQL_FILE="$SQL_DIR/SERVER_OUTFILE_PRIVS.sql"
+   local SQL_FILE="$SQL_DIR/SERVER_OUTFILE_PRIVS.sql"
   fi
   if [ ! "$BYPASS_PRIV_CHECK" == "TRUE" ]; then
     if [ "$DEBUG_SQL" == "TRUE" ] ; then
@@ -151,8 +153,8 @@ function is_db_localhost(){
   local SQL_FILE="$SQL_DIR/IS_DB_LOCALHOST.sql"
   local SQL=$(cat $SQL_FILE)
   # YOU CANNOT DEBUG_SQL HERE BECAUSE THIS EFFECTS SQL TEXT, SO IT MUST BE RUN
-    DBHOST=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
-    CLIENTHOST=$(hostname)
+    local DBHOST=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
+    local CLIENTHOST=$(hostname)
     if [ ! "$DBHOST" == "$CLIENTHOST" ]; then CLIENT_SIDE='TRUE'; else DB_IS_LOCAL='TRUE'; fi
       printf "Database Host: "; TEMP_COLOR=lmagenta; print_color "$DBHOST\n"; unset TEMP_COLOR;
       printf "Client Host:   "; TEMP_COLOR=lmagenta; print_color "$CLIENTHOST\n"; unset TEMP_COLOR;
@@ -173,7 +175,9 @@ function start_message() {
   else 
     RUNAS="$(whoami)"
   fi
-  $CMD_MARIADB $CLOPTS -s -e "select now()" 1>/dev/null 2>/dev/null && CAN_CONNECT=true || unset CAN_CONNECT
+  local SQL_FILE="$SQL_DIR/NOW.sql"
+  local SQL=$(cat $SQL_FILE)
+  $CMD_MARIADB $CLOPTS -s -e "$SQL" 1>/dev/null 2>/dev/null && CAN_CONNECT=true || unset CAN_CONNECT
   if [ $CAN_CONNECT ]; then
     TEMP_COLOR=lgreen; print_color "Can connect to database.\n"; unset TEMP_COLOR;
   else
@@ -408,8 +412,12 @@ function set_log_error() {
   unset DATADIR LOG_ERROR 
   if [ ! "$DB_IS_LOCAL" == 'TRUE' ]; then return; fi
   if [ $CAN_CONNECT ]; then
-    LOG_ERROR=$($CMD_MARIADB $CLOPTS  -ABNe "select @@log_error")
-    DATADIR=$($CMD_MARIADB $CLOPTS  -ABNe "select @@datadir" | sed 's:/*$::')
+  local SQL_FILE="$SQL_DIR/LOG_ERROR.sql"
+  local SQL=$(cat $SQL_FILE)  
+    LOG_ERROR=$($CMD_MARIADB $CLOPTS  -ABNe "$SQL")
+  local SQL_FILE="$SQL_DIR/DATADIR.sql"
+  local SQL=$(cat $SQL_FILE)
+    DATADIR=$($CMD_MARIADB $CLOPTS  -ABNe "$SQL" | sed 's:/*$::')
   else
     LOG_ERROR=$(my_print_defaults --mysqld| grep log_error | tail -1 | cut -d "=" -f2)
     DATADIR=$(my_print_defaults --mysqld| grep datadir | tail -1 | cut -d "=" -f2 | sed 's:/*$::')
