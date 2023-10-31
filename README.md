@@ -45,6 +45,8 @@ All of the database commands the script runs can be found in the SQL directory. 
 The most simple method for running Mariadb Quick Review is via unix_socket as root on the database host. If you want another user to connect to the database, add a user and password to the file `quick_review.cnf`.
 
 ### Connecting over the network
+The mariadb_quick_review.sh will check whether the hostname for the bash shell is the same as the hostname for the database. If they are different, the script will save files on the client machine by redirect. 
+
 You can define  a connection for any user and using any method that is supported by mariadb client. Edit the file `quick_review.cnf`. For example, a user connecting to a remote database might look like this:
 ```
 [mariadb_quick_review]
@@ -59,15 +61,6 @@ ssl-ca = /etc/ssl/certs/mariadb_chain_2024.pem
 
 Once the configuration in quick_review.cnf is correct, just run the script with the desired options.
 
-## Sharing Results With MariaDB Support
-When the script completes, it will archive all the output into one compressed file. The script will indictate the name of the file. It will be found in the directory /tmp/mariadb_quick_review . An example of the file name:
-```
-/tmp/mariadb_quick_review/QK-MjA3OD_logs_Oct-14.tar.gz
-```
-
-#### Running the mariadb_quick_review.sh script from a remote host
-The mariadb_quick_review.sh will check whether the hostname for the bash shell is the same as the hostname for the database. If they are different, the script will save files on the client machine by redirect. This means you can run the script even when you do not have access to the host of the database server. 
-
 #### Privileges Required;
 ```SQL
 -- GRANTS REQUIRED FOR SELECT INTO OUTFILE (SCRIPT IS RUN ON HOST OF THE DATABASE).
@@ -81,6 +74,12 @@ GRANT SLAVE MONITOR on *.* to 'adminuser'@'%';
 GRANT SELECT, PROCESS on *.* to 'adminuser'@'%';
 -- IF INSTANCE IS A REPLICATION SLAVE, AN ADDITIONAL PRIVILEGE IS REQUIRED:
 GRANT SLAVE MONITOR on *.* to 'adminuser'@'%';
+```
+
+## Sharing Results With MariaDB Support
+When the script completes, it will archive all the output into one compressed file. The script will indictate the name of the file. It will be found in the directory /tmp/mariadb_quick_review . An example of the file name:
+```
+/tmp/mariadb_quick_review/QK-MjA3OD_logs_Oct-14.tar.gz
 ```
 
 ***
