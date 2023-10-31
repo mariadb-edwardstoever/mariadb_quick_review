@@ -34,6 +34,13 @@ This script can be run without options. Not indicating an option value will use 
   --no_outfiles           # Output to stdout instead of to files
 
 ```
+#### What will this script do on the database?
+The Mariadb Quick Review script will perform the following operations on the database:
+* SELECT commands on tables in the information_schema and performance_schema. 
+* SHOW SLAVE STATUS, SHOW SLAVE HOSTS, SHOW ENGINE INNODB STATUS, SHOW OPEN TABLES
+
+All of the database commands the script runs can be found in the SQL directory. Some of your table names and column names will be collected. _No row data from your tables will be collected._
+
 ### Connecting with a unix socket
 The most simple method for running the quick review is as root on the database server. On most servers the script can be run easily like this:
 ```
@@ -56,9 +63,15 @@ Once the configuration in quick_review.cnf is correct, you can run the script as
 ```
 $ ./mariadb_quick_review.sh --minutes=10
 ```
+## Sharing Results With MariaDB Support
+When the script completes, it will archive all the output into one compressed file. The script will indictate the name of the file. It will be found in the directory /tmp/mariadb_quick_review . An example of the file name:
+```
+/tmp/mariadb_quick_review/QK-MjA3OD_logs_Oct-14.tar.gz
+```
+
 ### How Files are Saved and Required Privileges
-#### Running the mariadb_quick_review.sh script on the database host
-If you simply run the script with a unix socket, your user is likely root and will already have the SUPER privilege which can do anything. 
+
+If you simply run the script connecting via unix socket, your user is likely root and will already have the SUPER privilege which can do anything. 
 ```
 $ # ON DB HOST, RUN USING DATABASE SELECT INTO OUTFILE:
 $ ./mariadb_quick_review.sh
@@ -66,14 +79,9 @@ $ ./mariadb_quick_review.sh
 $ # ON DB HOST, RUN REDIRECTING OUTPUT TO FILES:
 $ ./mariadb_quick_review.sh --client_side_outfiles
 ```
+
 #### Running the mariadb_quick_review.sh script from a remote client
 The mariadb_quick_review.sh will check whether the hostname for the bash shell is the same as the hostname for the database. If they are different, the script will save files on the client machine by redirect. This means you can run the script even when you do not have access to the host of the database server. Use the switch `--client_side_outfiles` to force a save using redirect from the host of the database.
-
-## Sharing Results With MariaDB Support
-When the script completes, it will archive all the output into one compressed file. The script will indictate the name of the file. It will be found in the directory /tmp/mariadb_quick_review . An example of the file name:
-```
-/tmp/mariadb_quick_review/QK-MjA3OD_logs_Oct-14.tar.gz
-```
 
 #### Privileges Required;
 ```SQL
@@ -89,13 +97,6 @@ GRANT SELECT, PROCESS on *.* to 'adminuser'@'%';
 -- IF INSTANCE IS A REPLICATION SLAVE, AN ADDITIONAL PRIVILEGE IS REQUIRED:
 GRANT SLAVE MONITOR on *.* to 'adminuser'@'%';
 ```
-
-#### What will this script do on the database?
-The Mariadb Quick Review script will perform the following operations on the database:
-* SELECT commands on tables in the information_schema and performance_schema. 
-* SHOW SLAVE STATUS, SHOW SLAVE HOSTS, SHOW ENGINE INNODB STATUS, SHOW OPEN TABLES
-
-All of the database commands the script runs can be found in the SQL directory. Some of your table names and column names will be collected. _No row data from your tables will be collected._
 
 ***
 ## What information will Mariadb Quick Review script provide to MariaDB Support team?
