@@ -12,7 +12,6 @@ wget https://github.com/mariadb-edwardstoever/mariadb_quick_review/archive/refs/
 This script is for initial review of MariaDB server for MariaDB Support tickets. In many cases, this script can be run on the database host with no modification as simply as:
 ```
 $ ./mariadb_quick_review.sh
-
 ```
 
 ### Available Options
