@@ -5,6 +5,8 @@
 # If none are specified, the script will attempt a socket connection from 
 # unix account, such as root@localhost.
 
+# Do not define a connection through maxscale.
+
 # The group name must be [mariadb_quick_review]
 [mariadb_quick_review]
 # user = dbpgf21089765
