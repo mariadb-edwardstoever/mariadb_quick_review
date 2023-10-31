@@ -41,8 +41,8 @@ The Mariadb Quick Review script will perform the following operations on the dat
 
 All of the database commands the script runs can be found in the SQL directory. Table names and column names will be collected. Queries will be collected. _No row data from your tables will be collected._
 
-### Connecting with a unix socket
-The most simple method for running Mariadb Quick Review is as root on the database server. If you want another user to connect to the database, add a user and password to the file `quick_review.cnf`.
+### Connecting from the database host
+The most simple method for running Mariadb Quick Review is via unix_socket as root on the database host. If you want another user to connect to the database, add a user and password to the file `quick_review.cnf`.
 
 ### Connecting over the network
 You can define  a connection for any user and using any method that is supported by mariadb client. Edit the file `quick_review.cnf`. For example, a user connecting to a remote database might look like this:
