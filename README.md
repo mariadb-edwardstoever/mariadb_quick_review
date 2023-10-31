@@ -61,7 +61,7 @@ ssl-ca = /etc/ssl/certs/mariadb_chain_2024.pem
 
 Once the configuration in quick_review.cnf is correct, just run the script with the desired options.
 
-#### Privileges Required;
+#### Required Privileges
 ```SQL
 -- GRANTS REQUIRED FOR SELECT INTO OUTFILE (SCRIPT IS RUN ON HOST OF THE DATABASE).
 GRANT SELECT, PROCESS, FILE on *.* to 'adminuser'@'%';
