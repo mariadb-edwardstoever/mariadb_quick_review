@@ -50,7 +50,8 @@ host = mindapp.ha.db7.mariadb.com
 port = 5305
 ssl-ca = /etc/ssl/certs/mariadb_chain_2024.pem
 ```
-It is recommended to define the password in the quick_review.cnf file. If you just put in `password` without `= "my_pa$$word` you will have to interactively input a password many times and the timing of performance statistics will be less useful.
+* Do not define a connection through maxscale.
+* It is best to run the script on the host of the database so that information from the operating system and database errors can be collected.
 
 Once the configuration in quick_review.cnf is correct, you can run the script as easily as:
 ```
@@ -95,7 +96,7 @@ The Mariadb Quick Review script will perform the following operations on the dat
 * SELECT commands on tables in the information_schema and performance_schema. 
 * SHOW SLAVE STATUS, SHOW SLAVE HOSTS, SHOW ENGINE INNODB STATUS, SHOW OPEN TABLES
 
-All of the database commands the script runs can be found in the SQL directory. Some of your table names and column names will be collected. _No row data from your tables is collected._
+All of the database commands the script runs can be found in the SQL directory. Some of your table names and column names will be collected. _No row data from your tables will be collected._
 
 ***
 ## What information will Mariadb Quick Review script provide to MariaDB Support team?
