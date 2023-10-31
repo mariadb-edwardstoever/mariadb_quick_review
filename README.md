@@ -8,10 +8,23 @@ git clone https://github.com/mariadb-edwardstoever/mariadb_quick_review.git
 wget https://github.com/mariadb-edwardstoever/mariadb_quick_review/archive/refs/heads/main.zip
 ```
 
-### Overview
-This script is for initial review of MariaDB server for MariaDB Support tickets. In many cases, this script can be run on the database host with no modification as simply as:
+## Overview
+This script is for initial review of MariaDB server for MariaDB Support tickets. 
+
+### What will this script do on the database?
+The Mariadb Quick Review script will perform the following operations on the database:
+* SELECT commands on tables in the information_schema and performance_schema. 
+* SHOW SLAVE STATUS, SHOW SLAVE HOSTS, SHOW ENGINE INNODB STATUS, SHOW OPEN TABLES
+
+All of the database commands the script runs can be found in the SQL directory. Table names and column names will be collected. Queries will be collected. _No row data from your tables will be collected._
+
+### Examples of running the script on the command line
 ```
-$ ./mariadb_quick_review.sh
+./mariadb_quick_review.sh 
+./mariadb_quick_review.sh --test
+./mariadb_quick_review.sh --help
+./mariadb_quick_review.sh --minutes=10 --logs
+./mariadb_quick_review.sh --minutes=10 --stats_per_min=4
 ```
 
 ### Available Options
@@ -32,14 +45,7 @@ This script can be run without options. Not indicating an option value will use 
   --debug_outfiles        # view the outfiles as each is created
   --bypass_priv_check     # Bypass the check that the database user has sufficient privileges.
   --no_outfiles           # Output to stdout instead of to files
-
 ```
-#### What will this script do on the database?
-The Mariadb Quick Review script will perform the following operations on the database:
-* SELECT commands on tables in the information_schema and performance_schema. 
-* SHOW SLAVE STATUS, SHOW SLAVE HOSTS, SHOW ENGINE INNODB STATUS, SHOW OPEN TABLES
-
-All of the database commands the script runs can be found in the SQL directory. Table names and column names will be collected. Queries will be collected. _No row data from your tables will be collected._
 
 ### Connecting from the database host
 The most simple method for running Mariadb Quick Review is via unix_socket as root on the database host. If you want another user to connect to the database, add a user and password to the file `quick_review.cnf`.
@@ -61,7 +67,7 @@ ssl-ca = /etc/ssl/certs/mariadb_chain_2024.pem
 
 Once the configuration in quick_review.cnf is correct, just run the script with the desired options.
 
-#### Required Privileges
+### Required Privileges
 ```SQL
 -- GRANTS REQUIRED FOR SELECT INTO OUTFILE (SCRIPT IS RUN ON HOST OF THE DATABASE).
 GRANT SELECT, PROCESS, FILE on *.* to 'adminuser'@'%';
@@ -76,7 +82,7 @@ GRANT SELECT, PROCESS on *.* to 'adminuser'@'%';
 GRANT SLAVE MONITOR on *.* to 'adminuser'@'%';
 ```
 
-## Sharing Results With MariaDB Support
+### Sharing Results With MariaDB Support
 When the script completes, it will archive all the output into one compressed file. The script will indictate the name of the file. It will be found in the directory /tmp/mariadb_quick_review . An example of the file name:
 ```
 /tmp/mariadb_quick_review/QK-MjA3OD_logs_Oct-14.tar.gz
