@@ -35,7 +35,7 @@ This script can be run without options. Not indicating an option value will use 
 
 ```
 ### Connecting with a unix socket
-The most simple method for running the quick review is as root on the database server. On most servers can you can simply do this:
+The most simple method for running the quick review is as root on the database server. On most servers the script can be run easily like this:
 ```
 $ ./mariadb_quick_review.sh --minutes=10
 ```
