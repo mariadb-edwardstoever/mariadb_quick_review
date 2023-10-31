@@ -93,7 +93,8 @@ GRANT SLAVE MONITOR on *.* to 'adminuser'@'%';
 #### What will this script do on the database?
 The Mariadb Quick Review script will perform the following operations on the database:
 * SELECT commands on tables in the information_schema and performance_schema. 
-* Show commands: SHOW SLAVE STATUS, SHOW SLAVE HOSTS, SHOW ENGINE INNODB STATUS, SHOW OPEN TABLES
+* SHOW SLAVE STATUS, SHOW SLAVE HOSTS, SHOW ENGINE INNODB STATUS, SHOW OPEN TABLES
+
 All of the database commands the script runs can be found in the SQL directory.
 
 ***
