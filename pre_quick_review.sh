@@ -22,6 +22,7 @@ printf "This script can be run without options. Not indicating an option value w
   --logs               # Include database error logs and system logs in archive for support ticket.
   --multi_processlist  # Turns on collecting processlist with each statistics collection. Turned off by default.
   --logs               # Collect database error logs and system logs and include in generated file.
+  --redirect_to_files  # Force a redirect of output to files instead of SELECT INTO OUTFILE.
   --test               # Test connect to database and display script version
   --version            # Test connect to database and display script version
   --help               # Display the help menu
@@ -29,7 +30,6 @@ printf "This script can be run without options. Not indicating an option value w
   ### THE BELOW OPTIONS ARE INTEDED FOR SOFTWARE DEVELOPMENT ###
   --debug_sql             # Instead of running SQL commands, display the SQL commands that will be run
   --debug_outfiles        # view the outfiles as each is created
-  --client_side_outfiles  # Force a redirect of output to files instead of SELECT INTO OUTFILE.
   --bypass_priv_check     # Bypass the check that the database user has sufficient privileges.
   --no_outfiles           # Output to stdout instead of to files
 
@@ -626,7 +626,7 @@ if [ $(echo "$params"|sed 's,=.*,,') == '--stats_per_min' ]; then
 fi
   if [ "$params" == '--multi_processlist' ]; then MULTI_PROCESSLIST='TRUE'; VALID=TRUE; fi
   if [ "$params" == '--no_outfiles' ]; then OUT_TO_FILES='FALSE'; VALID=TRUE; fi
-  if [ "$params" == '--client_side_outfiles' ]; then CLIENT_SIDE='TRUE'; VALID=TRUE; fi  
+  if [ "$params" == '--redirect_to_files' ]; then CLIENT_SIDE='TRUE'; VALID=TRUE; fi  
   if [ "$params" == '--logs' ]; then COLLECT_LOGS=TRUE; VALID=TRUE; fi
   if [ "$params" == '--debug_sql' ]; then DEBUG_SQL='TRUE'; VALID=TRUE; fi
   if [ "$params" == '--debug_outfiles' ]; then DEBUG_OUTFILE='TRUE'; VALID=TRUE; fi

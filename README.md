@@ -22,6 +22,7 @@ This script can be run without options. Not indicating an option value will use 
                        # Valid values for stats_per_min: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60
   --multi_processlist  # Turns on collecting processlist with each statistics collection. Turned off by default.
   --logs               # Collect database error logs and system logs and include in generated file.
+  --redirect_to_files  # Force a redirect of output to files instead of SELECT INTO OUTFILE.
   --test               # Test connect to database and display script version
   --version            # Test connect to database and display script version
   --help               # Display the help menu
@@ -29,7 +30,6 @@ This script can be run without options. Not indicating an option value will use 
   ### THE BELOW OPTIONS ARE INTEDED FOR SOFTWARE DEVELOPMENT ###
   --debug_sql             # Instead of running SQL commands, display the SQL commands that will be run
   --debug_outfiles        # view the outfiles as each is created
-  --client_side_outfiles  # Force a redirect of output to files instead of SELECT INTO OUTFILE.
   --bypass_priv_check     # Bypass the check that the database user has sufficient privileges.
   --no_outfiles           # Output to stdout instead of to files
 
@@ -69,9 +69,8 @@ When the script completes, it will archive all the output into one compressed fi
 /tmp/mariadb_quick_review/QK-MjA3OD_logs_Oct-14.tar.gz
 ```
 
-
-#### Running the mariadb_quick_review.sh script from a remote client
-The mariadb_quick_review.sh will check whether the hostname for the bash shell is the same as the hostname for the database. If they are different, the script will save files on the client machine by redirect. This means you can run the script even when you do not have access to the host of the database server. Use the switch `--client_side_outfiles` to force a save using redirect from the host of the database.
+#### Running the mariadb_quick_review.sh script from a remote host
+The mariadb_quick_review.sh will check whether the hostname for the bash shell is the same as the hostname for the database. If they are different, the script will save files on the client machine by redirect. This means you can run the script even when you do not have access to the host of the database server. Use the switch `--redirect_to_files` to force a save using redirect from the host of the database.
 
 #### Privileges Required;
 ```SQL
