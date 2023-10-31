@@ -69,16 +69,6 @@ When the script completes, it will archive all the output into one compressed fi
 /tmp/mariadb_quick_review/QK-MjA3OD_logs_Oct-14.tar.gz
 ```
 
-### How Files are Saved and Required Privileges
-
-If you simply run the script connecting via unix socket, your user is likely root and will already have the SUPER privilege which can do anything. 
-```
-$ # ON DB HOST, RUN USING DATABASE SELECT INTO OUTFILE:
-$ ./mariadb_quick_review.sh
-
-$ # ON DB HOST, RUN REDIRECTING OUTPUT TO FILES:
-$ ./mariadb_quick_review.sh --client_side_outfiles
-```
 
 #### Running the mariadb_quick_review.sh script from a remote client
 The mariadb_quick_review.sh will check whether the hostname for the bash shell is the same as the hostname for the database. If they are different, the script will save files on the client machine by redirect. This means you can run the script even when you do not have access to the host of the database server. Use the switch `--client_side_outfiles` to force a save using redirect from the host of the database.
