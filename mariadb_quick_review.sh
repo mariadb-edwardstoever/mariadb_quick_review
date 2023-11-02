@@ -70,6 +70,7 @@ record_df DF
 record_machine_architecture MACHINE_ARCHITECTURE
 record_cpu_info CPU_INFO
 record_memory_info MEMORY_INFO
+record_page_all_slaves_status PAGE_ALL_SLAVES_STATUS
 
 # CURRENT_RUN is collected just one time, and in the PERF STATS loop. If no perf stats loop, collect it here:
 if [ "$MINS" == "0" ]; then
@@ -119,8 +120,9 @@ for (( ii=1; ii<=$((MINUTES_TO_COLLECT_PERF_STATS * PER_MIN)); ii++))
      run_sql GALERA_WARNINGS "GALERA_WARNINGS.$SUBROUTINE"
    fi
 
-   if [ "$IS_REPLICA" == "YES" ] && [ "$SLAVES_RUNNING" == "1" ]; then # can only do this if there is only one slave running
+   if [ "$IS_REPLICA" == "YES" ]; then 
      record_slave_status "SLAVE_STATUS.$SUBROUTINE"
+	 record_all_slaves_status "ALL_SLAVES_STATUS.$SUBROUTINE"
    fi
 
    record_mysql_top "MYSQL_TOP.$SUBROUTINE"

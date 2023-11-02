@@ -14,6 +14,18 @@ MINS=5 #DEFAULT
 RUNID=$(echo $(echo $(($RANDOM * $RANDOM +100000))| base64 | sed 's/\=//g' | head -c 6 2>/dev/null || echo 'NOTRND')  | awk '{print "QK-" substr($0,1,6)}')
 MARIADB_PROCESS_OWNER="$(ps -ef | grep -E '(mariadbd|mysqld)' | grep -v "grep" | head -1 |awk '{print $1}')"
 
+function ts() {
+   TS=$(date +%F-%T | tr ':-' '_')
+   echo "$TS $*"
+}
+
+function die() {
+   ts "$*" >&2
+   exit 1
+}
+
+if [ ! $SCRIPT_VERSION ]; then  die "Do not run this script directly. Read the file README.md for help."; fi
+
 function display_help_message() {
 printf "This script can be run without options. Not indicating an option value will use the default.
   --minutes=10         # indicate the number of minutes to collect performance statistics, default 5
@@ -27,7 +39,7 @@ printf "This script can be run without options. Not indicating an option value w
   --version            # Test connect to database and display script version
   --help               # Display the help menu
 
-  ### THE BELOW OPTIONS ARE INTEDED FOR SOFTWARE DEVELOPMENT ###
+  ### THE BELOW OPTIONS ARE INTENDED FOR SOFTWARE DEVELOPMENT ###
   --debug_sql             # Instead of running SQL commands, display the SQL commands that will be run
   --debug_outfiles        # view the outfiles as each is created
   --bypass_priv_check     # Bypass the check that the database user has sufficient privileges.
@@ -241,6 +253,7 @@ function run_sql() {
 }
 
 function record_disks (){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
 local SQL_FILE="$SQL_DIR/DISKS.sql"
   local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because logic in SQL prevents SELECT INTO OUTFILE
   local SQL=$(cat $SQL_FILE)
@@ -256,6 +269,7 @@ local SQL_FILE="$SQL_DIR/DISKS.sql"
 }
 
 function record_mysql_top(){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
 if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
 local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
 if [ "$(id --user $MARIADB_PROCESS_OWNER  2>/dev/null)" ] && [ "$DB_IS_LOCAL" == 'TRUE' ]; then
@@ -270,6 +284,7 @@ fi
 }
 
 function record_df(){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
 if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
 local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
 if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
@@ -284,6 +299,7 @@ fi
 }
 
 function record_memory_info(){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
 if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
 local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
 if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
@@ -299,6 +315,7 @@ fi
 }
 
 function record_cpu_info(){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
 if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
 local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
 if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
@@ -314,6 +331,7 @@ fi
 }
 
 function record_machine_architecture(){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
 if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
 local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
 if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
@@ -335,6 +353,8 @@ fi
 }
 
 function record_recent_errors(){
+if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
 if [ ! "$DB_IS_LOCAL" == 'TRUE' ]; then return; fi
 if [ ! -f "$LOG_ERROR" ] ; then return; fi
 local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
@@ -346,6 +366,7 @@ RECENT=$(tail -200000 $LOG_ERROR | grep -i "\[ERROR\]")
 }
 
 function record_slave_hosts (){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
 local SQL_FILE="$SQL_DIR/SLAVE_HOSTS.sql"
   local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
   local SQL=$(cat $SQL_FILE)
@@ -361,6 +382,7 @@ local SQL_FILE="$SQL_DIR/SLAVE_HOSTS.sql"
 }
 
 function record_open_tables (){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
 local SQL_FILE="$SQL_DIR/OPEN_TABLES.sql"
   local OUTFILE="$QK_TMPDIR/$2.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
   local SQL=$(cat $SQL_FILE)
@@ -376,6 +398,7 @@ local SQL_FILE="$SQL_DIR/OPEN_TABLES.sql"
 }
 
 function record_engine_innodb_status (){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
 local SQL_FILE="$SQL_DIR/ENGINE_INNODB_STATUS.sql"
   local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
   local SQL=$(cat $SQL_FILE)
@@ -404,8 +427,51 @@ function record_slave_status(){
 	local LAST_SQL_ERROR=$(printf "$STATUS\n" | grep -i Last_SQL_Error | sed 's/.*Last_SQL_Error://' | sed 's|["'\'']||g')
 	local LAST_IO_ERROR=$(printf "$STATUS\n" | grep -i Last_IO_Error | sed 's/.*Last_IO_Error://' | sed 's|["'\'']||g')
     local BEHIND_MASTER=$(printf "$STATUS\n" | grep -i Seconds_Behind_Master | awk '{print $2}')
+	if [ "$BEHIND_MASTER" == "" ]; then touch $OUTFILE; display_file_written_message; return; fi
     printf "$SUBROUTINE\t$DT\t$HOSTNAME\t$BEHIND_MASTER\t$GTID_IO_POS\t$GTID_SLAVE_POS\t$RUNNING_STATE\t$LAST_SQL_ERROR\t$LAST_IO_ERROR\n" > $OUTFILE
     display_file_written_message
+  fi
+}
+
+function record_all_slaves_status(){
+  local SQL_FILE="$SQL_DIR/ALL_SLAVES_STATUS.sql"
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
+  local SQL=$(cat $SQL_FILE)
+  if [ "$DEBUG_SQL" == "TRUE" ] ; then
+    echo "$SQL"; echo; echo;
+  else  
+    local ALL_STATUS=$($CMD_MARIADB $CLOPTS -Ae "$SQL"| grep -i -E '(Connection_name|Slave_SQL_Running_State|Seconds_Behind_Master|Gtid_IO_Pos|Gtid_Slave_Pos|DB_Time|Hostname|Last_SQL_Error|Last_IO_Error)')
+    local COUNT_SLAVES=$(printf "$ALL_STATUS\n" | grep -i Connection_name |wc -l)
+	if [ "$COUNT_SLAVES" == "0" ]; then touch $OUTFILE; display_file_written_message; return; fi
+    for (( ix=1; ix<=${COUNT_SLAVES}; ix++))
+    do
+      local CONN_NAME=$(printf "$ALL_STATUS\n" | grep -i Connection_name | head -${ix} | tail -1 | awk '{print $2}')
+      local DT=$(printf "$ALL_STATUS\n" | grep -i DB_Time | awk '{print $2 " " $3}')
+      local GTID_IO_POS=$(printf "$ALL_STATUS\n" | grep -i Gtid_IO_Pos  | head -${ix} | tail -1 | awk '{print $2}')
+      local GTID_SLAVE_POS=$(printf "$ALL_STATUS\n" | grep -i Gtid_Slave_Pos | head -${ix} | tail -1  | awk '{print $2}')
+      local HOSTNAME=$(printf "$ALL_STATUS\n" | grep -i Hostname | awk '{print $2}')
+      local RUNNING_STATE=$(printf "$ALL_STATUS\n" | grep -i Slave_SQL_Running_State  | head -${ix} | tail -1| sed 's/.*\://' |xargs)
+      local LAST_SQL_ERROR=$(printf "$ALL_STATUS\n" | grep -i Last_SQL_Error  | head -${ix} | tail -1 | sed 's/.*Last_SQL_Error://' | sed 's|["'\'']||g')
+      local LAST_IO_ERROR=$(printf "$ALL_STATUS\n" | grep -i Last_IO_Error  | head -${ix} | tail -1 | sed 's/.*Last_IO_Error://' | sed 's|["'\'']||g')
+      local BEHIND_MASTER=$(printf "$ALL_STATUS\n" | grep -i Seconds_Behind_Master  | head -${ix} | tail -1 | awk '{print $2}')
+      printf "$SUBROUTINE\t$DT\t$HOSTNAME\t$CONN_NAME\t$BEHIND_MASTER\t$GTID_IO_POS\t$GTID_SLAVE_POS\t$RUNNING_STATE\t$LAST_SQL_ERROR\t$LAST_IO_ERROR\n" >> $OUTFILE
+    done
+    display_file_written_message
+  fi
+}
+
+function record_page_all_slaves_status (){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
+local SQL_FILE="$SQL_DIR/PAGE_ALL_SLAVES_STATUS.sql"
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because there is no SELECT INTO OUTFILE
+  local SQL=$(cat $SQL_FILE)
+  if [ "$DEBUG_SQL" == "TRUE" ] ; then
+    echo "$SQL"; echo; echo;
+  else  
+    local STATUS=$($CMD_MARIADB $CLOPTS -Ae "$SQL")
+	if [ "$STATUS" == "" ]; then local STATUS="No output from command SHOW ALL SLAVES STATUS."; fi
+    printf "\"$RUNID\"\t\"$STATUS\"" > $OUTFILE
+    display_file_written_message 
   fi
 }
 
@@ -459,6 +525,8 @@ if [ ! $LOG_ERROR ]; then return; fi
 }
 
 function post_version() {
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
+if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
 # to inform importer script which script version was used to create the data
   cp ${SCRIPT_DIR}/vsn.sh ${QK_TMPDIR}/vsn.sh
 }
@@ -493,16 +561,6 @@ function mk_tmpdir() {
   fi
 }
 
-function ts() {
-   TS=$(date +%F-%T | tr ':-' '_')
-   echo "$TS $*"
-}
-
-function die() {
-   ts "$*" >&2
-   exit 1
-}
-
 function _which() {
    if [ -x /usr/bin/which ]; then
       /usr/bin/which "$1" 2>/dev/null | awk '{print $1}'
@@ -534,7 +592,8 @@ function test_dependencies(){
 }
 
 function compress_file(){
-  if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
+  if [ "$DEBUG_SQL" == "TRUE" ]; then return; fi
+  if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
   if [ ! -d $QK_TMPDIR ]; then die "Directory $QK_TMPDIR does not exist."; fi
   COMPRESSFILE=$(dirname $QK_TMPDIR)/${RUNID}_$(hostname)_$(date +"%b-%d").tar.gz
   cd $QK_TMPDIR

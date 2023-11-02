@@ -14,7 +14,7 @@ This script is for initial review of MariaDB server for MariaDB Support tickets.
 ### What will this script do on the database?
 The Mariadb Quick Review script will perform the following operations on the database:
 * SELECTs on tables in the information_schema and performance_schema. 
-* SHOW SLAVE STATUS, SHOW SLAVE HOSTS, SHOW ENGINE INNODB STATUS, SHOW OPEN TABLES
+* SHOW SLAVE STATUS, SHOW ALL SLAVES STATUS, SHOW SLAVE HOSTS, SHOW ENGINE INNODB STATUS, SHOW OPEN TABLES
 
 All of the database commands the script runs can be found in the SQL directory. Table names and column names will be collected. Active queries will be collected. _Row data from user created tables will not be collected._
 
@@ -40,7 +40,7 @@ This script can be run without options. Not indicating an option value will use 
   --version            # Test connect to database and display script version
   --help               # Display the help menu
 
-  ### THE BELOW OPTIONS ARE INTEDED FOR SOFTWARE DEVELOPMENT ###
+  ### THE BELOW OPTIONS ARE INTENDED FOR SOFTWARE DEVELOPMENT ###
   --debug_sql             # Instead of running SQL commands, display the SQL commands that will be run
   --debug_outfiles        # view the outfiles as each is created
   --bypass_priv_check     # Bypass the check that the database user has sufficient privileges.

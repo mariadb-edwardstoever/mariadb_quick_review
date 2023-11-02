@@ -93,4 +93,13 @@ UNION ALL
   AND TABLE_TYPE='BASE TABLE'
   AND @IS_GALERA='YES'
   having count(*) > 0
+UNION ALL
+  select '$RUNID', now() as TICK, @@HOSTNAME,
+  concat('Incorrect value for innodb_autoinc_lock_mode: ', VARIABLE_VALUE) as ITEM,
+  'For Galera Cluster, the lock mode needs to be set to 2.' as STATUS,
+  concat('https://mariadb.com/kb/en/innodb-system-variables/#innodb_autoinc_lock_mode') as INFO
+  from information_schema.GLOBAL_VARIABLES
+  where VARIABLE_NAME='INNODB_AUTOINC_LOCK_MODE'
+  and VARIABLE_VALUE!=2
+  and @IS_GALERA='YES'
 
