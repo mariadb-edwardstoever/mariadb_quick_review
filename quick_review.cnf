@@ -19,7 +19,4 @@
 # ssl-verify-server-cert = on
 # ssl-ca = /etc/ssl/certs/skysql_chain_2022.pem
 
-user = edward
-password = password
-host = 192.168.8.134
 
