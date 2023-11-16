@@ -268,6 +268,72 @@ local SQL_FILE="$SQL_DIR/DISKS.sql"
   fi
 }
 
+function record_master_status (){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
+local SQL_FILE="$SQL_DIR/MASTER_STATUS.sql"
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because logic in SQL prevents SELECT INTO OUTFILE
+  local SQL=$(cat $SQL_FILE)
+  if [ "$DEBUG_SQL" == "TRUE" ] ; then
+    echo "$SQL"; echo; echo;
+  else  
+    local MASTER_STATUS=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
+    while IFS= read -r line; do
+      if [ ! -z "$line" ]; then printf "$RUNID\t$line\n" >> $OUTFILE; else touch $OUTFILE; fi
+    done <<< "$MASTER_STATUS"
+    display_file_written_message
+  fi
+}
+
+function record_binary_logs (){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
+local SQL_FILE="$SQL_DIR/BINARY_LOGS.sql"
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because logic in SQL prevents SELECT INTO OUTFILE
+  local SQL=$(cat $SQL_FILE)
+  if [ "$DEBUG_SQL" == "TRUE" ] ; then
+    echo "$SQL"; echo; echo;
+  else  
+    local BINARY_LOGS=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
+    while IFS= read -r line; do
+      if [ ! -z "$line" ]; then printf "$RUNID\t$line\n" >> $OUTFILE; else touch $OUTFILE; fi
+    done <<< "$BINARY_LOGS"
+    display_file_written_message
+  fi
+}
+
+function record_query_response_time (){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
+local SQL_FILE="$SQL_DIR/QUERY_RESPONSE_TIME.sql"
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because logic in SQL prevents SELECT INTO OUTFILE
+  export RUNID 
+  local SQL=$(envsubst < $SQL_FILE)
+  if [ "$DEBUG_SQL" == "TRUE" ] ; then
+    echo "$SQL"; echo; echo;
+  else  
+    local QUERY_RESPONSE_TIME=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
+    while IFS= read -r line; do
+      if [ ! -z "$line" ]; then printf "$line\n" >> $OUTFILE; else touch $OUTFILE; fi
+    done <<< "$QUERY_RESPONSE_TIME"
+    display_file_written_message
+  fi
+}
+
+function record_metadata_lock_info (){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
+local SQL_FILE="$SQL_DIR/METADATA_LOCK_INFO.sql"
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv because logic in SQL prevents SELECT INTO OUTFILE
+  export SUBROUTINE 
+  local SQL=$(envsubst < $SQL_FILE)
+  if [ "$DEBUG_SQL" == "TRUE" ] ; then
+    echo "$SQL"; echo; echo; exit 0
+  else  
+    local METADATA_LOCK_INFO=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
+    while IFS= read -r line; do
+      if [ ! -z "$line" ]; then printf "$line\n" >> $OUTFILE; else touch $OUTFILE; fi
+    done <<< "$METADATA_LOCK_INFO"
+    display_file_written_message
+  fi
+}
+
 function record_mysql_top(){
 if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
 if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi

@@ -71,6 +71,9 @@ record_machine_architecture MACHINE_ARCHITECTURE
 record_cpu_info CPU_INFO
 record_memory_info MEMORY_INFO
 record_page_all_slaves_status PAGE_ALL_SLAVES_STATUS
+record_binary_logs BINARY_LOGS
+record_master_status MASTER_STATUS
+record_query_response_time QUERY_RESPONSE_TIME
 
 # CURRENT_RUN is collected just one time, and in the PERF STATS loop. If no perf stats loop, collect it here:
 if [ "$MINS" == "0" ]; then
@@ -126,6 +129,7 @@ for (( ii=1; ii<=$((MINUTES_TO_COLLECT_PERF_STATS * PER_MIN)); ii++))
    fi
 
    record_mysql_top "MYSQL_TOP.$SUBROUTINE"
+   record_metadata_lock_info "METADATA_LOCK_INFO.$SUBROUTINE"
 
    if [ $INDEX -eq $MAX_INDEX ]; then MINS_REMAINING=$((MINS_REMAINING - 1)); fi
    # echo "DEBUG: $(date +%S) ${STATS_ON_SEC[${MAX_INDEX}]} $MINS_REMAINING $ii $DEBUG_SQL"
