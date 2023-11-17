@@ -364,6 +364,21 @@ if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
 fi
 }
 
+function record_ps(){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
+if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
+local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
+if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
+  local PS="$(ps -e -o pid=PID,uname=USERNAME,pcpu=CPU_USAGE,pmem=%MEM,comm=COMMAND 2>/dev/null)"
+  if [ ! -z "$PS" ]; then 
+    printf '%b\n' "\"$RUNID\"\t\"$PS\"" > $OUTFILE
+  else
+	printf "\"$RUNID\"\t\"ps not available\"\n" > $OUTFILE
+  fi
+  display_file_written_message
+fi
+}
+
 function record_memory_info(){
 if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
 if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
