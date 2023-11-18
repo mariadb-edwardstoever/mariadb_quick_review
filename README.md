@@ -18,6 +18,16 @@ The Mariadb Quick Review script will perform the following operations on the dat
 
 All of the database commands the script runs can be found in the SQL directory. Table names and column names will be collected. Active queries will be collected. _Row data from user created tables will not be collected._
 
+### What will this script do on the operating system?
+When run on the same host as the database, the Mariadb Quick Review script will perform the following operations on the database:
+* df (disk free)
+* ps (process list)
+* free (free memory)
+* lscpu (cpu information)
+* hostnamectl (host architecture)
+
+None of these commands will make changes.
+
 ### Examples of running the script on the command line
 ```
 ./mariadb_quick_review.sh 
