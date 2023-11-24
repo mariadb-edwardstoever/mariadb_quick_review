@@ -12,7 +12,8 @@ SLAVES_RUNNING=0; # DEFAULT
 OUT_TO_FILES='TRUE' # DEFAULT
 MINS=5 #DEFAULT
 RUNID=$(echo $(echo $(($RANDOM * $RANDOM +100000))| base64 | sed 's/\=//g' | head -c 6 2>/dev/null || echo 'NOTRND')  | awk '{print "QK-" substr($0,1,6)}')
-MARIADB_PROCESS_OWNER="$(ps -ef | grep -E '(mariadbd|mysqld)' | grep -v "grep" | head -1 |awk '{print $1}')"
+MARIADB_PROCESS_OWNER="$(ps -ef | grep -E '(mariadbd|mysqld)' | grep -v "grep" | grep -v "safe" | head -1 |awk '{print $1}')"
+if [ -z "$MARIADB_PROCESS_OWNER" ]; then MARIADB_PROCESS_OWNER=mysql; fi
 
 function ts() {
    TS=$(date +%F-%T | tr ':-' '_')
@@ -359,6 +360,21 @@ if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
     printf '%b\n' "\"$RUNID\"\t\"$DF\"" > $OUTFILE
   else
 	printf "\"$RUNID\"\t\"df not available\"\n" > $OUTFILE
+  fi
+  display_file_written_message
+fi
+}
+
+function record_ip(){
+if [ "$OUT_TO_FILES" == "FALSE" ]; then return; fi
+if [ "$DEBUG_SQL" == "TRUE" ] ; then return; fi
+local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
+if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
+  local IP="$(ip a 2>/dev/null)"
+  if [ ! -z "$IP" ]; then 
+    printf '%b\n' "\"$RUNID\"\t\"$IP\"" > $OUTFILE
+  else
+	printf "\"$RUNID\"\t\"ip not available\"\n" > $OUTFILE
   fi
   display_file_written_message
 fi

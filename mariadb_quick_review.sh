@@ -68,6 +68,7 @@ record_engine_innodb_status ENGINE_INNODB_STATUS
 record_disks DISKS
 record_df DF
 record_ps PS
+record_ip IP
 record_machine_architecture MACHINE_ARCHITECTURE
 record_cpu_info CPU_INFO
 record_memory_info MEMORY_INFO

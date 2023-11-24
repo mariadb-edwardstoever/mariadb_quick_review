@@ -22,9 +22,11 @@ All of the database commands the script runs can be found in the SQL directory. 
 When run on the same host as the database, the Mariadb Quick Review script will perform the following operations:
 * df (disk free)
 * ps (process list)
+* ip a (list of network interfaces)
 * free (free memory)
 * lscpu (cpu information)
 * hostnamectl (host architecture)
+* top (mysql owned processes in order of current CPU demand)
 
 None of these commands will make changes.
 
