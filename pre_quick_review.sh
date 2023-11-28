@@ -15,6 +15,7 @@ RUNID=$(echo $(echo $(($RANDOM * $RANDOM +100000))| base64 | sed 's/\=//g' | hea
 MARIADB_PROCESS_OWNER="$(ps -ef | grep -E '(mariadbd|mysqld)' | grep -v "grep" | grep -v "safe" | head -1 |awk '{print $1}')"
 if [ -z "$MARIADB_PROCESS_OWNER" ]; then MARIADB_PROCESS_OWNER=mysql; fi
 
+
 function ts() {
    TS=$(date +%F-%T | tr ':-' '_')
    echo "$TS $*"
@@ -656,6 +657,13 @@ function mk_tmpdir() {
   if [ "$(id --user $MARIADB_PROCESS_OWNER  2>/dev/null)" ] && [ ! "$CLIENT_SIDE" == 'TRUE' ]; then
     chown -R ${MARIADB_PROCESS_OWNER}:${MARIADB_PROCESS_OWNER} ${subdir}
   fi
+  # IF YOU CANNOT CREATE AN OUTFILE, YOU MUST SWITCH TO CLIENT SIDE tsv FILES.
+  local SQL_FILE="$SQL_DIR/NOW.sql"
+  local SQL=$(cat $SQL_FILE)
+  local OUTFILE=$QK_TMPDIR/TEST_WRITE.out
+  INTO_OUTFILE="INTO OUTFILE '$OUTFILE' FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '\\\\'"
+  SQL="$SQL $INTO_OUTFILE"
+  $CMD_MARIADB $CLOPTS -e "$SQL" 1>/dev/null 2>&1 || CLIENT_SIDE='TRUE';
 }
 
 function _which() {

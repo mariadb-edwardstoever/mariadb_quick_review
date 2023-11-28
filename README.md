@@ -28,7 +28,9 @@ When run on the same host as the database, the Mariadb Quick Review script will 
 * hostnamectl (host architecture)
 * top (mysql owned processes in order of current CPU demand)
 
-None of these commands will make changes.
+None of the commands in the Mariadb Quick Review script will make changes to any configuration.
+
+***
 
 ### Examples of running the script on the command line
 ```
