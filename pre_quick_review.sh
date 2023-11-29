@@ -815,7 +815,8 @@ if [ -z $CMD_MARIADB ]; then
 fi
 
 if [ -z $CMD_MY_PRINT_DEFAULTS ]; then
-  die "my_print_defaults command not available."
+#  die "my_print_defaults command not available."
+  CMD_MY_PRINT_DEFAULTS=${SCRIPT_DIR}/bin/my_print_defaults
 fi
 
 CLOPTS=$($CMD_MY_PRINT_DEFAULTS --defaults-file=$CONFIG_FILE mariadb_quick_review | sed -z -e "s/\n/ /g")
