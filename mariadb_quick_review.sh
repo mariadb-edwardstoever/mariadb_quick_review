@@ -72,7 +72,9 @@ record_ip IP
 record_machine_architecture MACHINE_ARCHITECTURE
 record_cpu_info CPU_INFO
 record_memory_info MEMORY_INFO
-record_page_all_slaves_status PAGE_ALL_SLAVES_STATUS
+if [ "$IS_REPLICA" == "YES" ]; then 
+  record_page_all_slaves_status PAGE_ALL_SLAVES_STATUS
+fi
 record_binary_logs BINARY_LOGS
 record_master_status MASTER_STATUS
 record_query_response_time QUERY_RESPONSE_TIME
@@ -127,7 +129,7 @@ for (( ii=1; ii<=$((MINUTES_TO_COLLECT_PERF_STATS * PER_MIN)); ii++))
 
    if [ "$IS_REPLICA" == "YES" ]; then 
      record_slave_status "SLAVE_STATUS.$SUBROUTINE"
-	 record_all_slaves_status "ALL_SLAVES_STATUS.$SUBROUTINE"
+     record_all_slaves_status "ALL_SLAVES_STATUS.$SUBROUTINE"
    fi
 
    record_mysql_top "MYSQL_TOP.$SUBROUTINE"
