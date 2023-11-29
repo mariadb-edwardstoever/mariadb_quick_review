@@ -12,7 +12,8 @@ SLAVES_RUNNING=0; # DEFAULT
 OUT_TO_FILES='TRUE' # DEFAULT
 MINS=5 #DEFAULT
 RUNID=$(echo $(echo $(($RANDOM * $RANDOM +100000))| base64 | sed 's/\=//g' | head -c 6 2>/dev/null || echo 'NOTRND')  | awk '{print "QK-" substr($0,1,6)}')
-MARIADB_PROCESS_OWNER="$(ps -ef | grep -E '(mariadbd|mysqld)' | grep -v "grep" | grep -v "safe" | head -1 |awk '{print $1}')"
+# MARIADB_PROCESS_OWNER="$(ps -ef | grep -E '(mariadbd|mysqld)' | grep -v "grep" | grep -v "safe" | grep -v "exporter" | head -1 |awk '{print $1}')"
+MARIADB_PROCESS_OWNER=$(ps -o user= -p $(pidof mariadbd 2>/dev/null | awk '{print $1}') 2>/dev/null)
 if [ -z "$MARIADB_PROCESS_OWNER" ]; then MARIADB_PROCESS_OWNER=mysql; fi
 
 
