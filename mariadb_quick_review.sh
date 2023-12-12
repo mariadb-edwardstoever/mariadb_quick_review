@@ -152,5 +152,9 @@ done
 set_log_error;
 record_recent_errors RECENT_ERRORS;
 collect_logs;
+record_ls_datadir LS_DATADIR
+record_limits_conf LIMITS_CONF
+record_mount MOUNT
+record_sysctl SYSCTL
 post_version;
 compress_file;

@@ -43,10 +43,11 @@ None of the commands in the Mariadb Quick Review script will make changes to any
 
 ### Available Options
 ```
-This script can be run without options. Not indicating an option value will use the default value.
+This script can be run without options. Not indicating an option value will use the default.
   --minutes=10         # indicate the number of minutes to collect performance statistics, default 5
   --stats_per_min=2    # indicate the number of times per minute to collect performance statistics, default 1
                        # Valid values for stats_per_min: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60
+  --omit_host_metrics  # Do not collect metrics from operating system commands such as top, ps, and df
   --multi_processlist  # Turns on collecting processlist with each statistics collection. Turned off by default.
   --logs               # Collect database error logs and system logs and include in generated file.
   --redirect_to_files  # Force a redirect of output to files instead of SELECT INTO OUTFILE.

@@ -34,7 +34,7 @@ printf "This script can be run without options. Not indicating an option value w
   --minutes=10         # indicate the number of minutes to collect performance statistics, default 5
   --stats_per_min=2    # indicate the number of times per minute to collect performance statistics, default 1
                        # Valid values for stats_per_min: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60
-  --logs               # Include database error logs and system logs in archive for support ticket.
+  --omit_host_metrics  # Do not collect metrics from operating system commands such as top, ps, and df
   --multi_processlist  # Turns on collecting processlist with each statistics collection. Turned off by default.
   --logs               # Collect database error logs and system logs and include in generated file.
   --redirect_to_files  # Force a redirect of output to files instead of SELECT INTO OUTFILE.
@@ -172,12 +172,18 @@ function is_db_localhost(){
     local DBHOST=$($CMD_MARIADB $CLOPTS -ABNe "$SQL")
     local CLIENTHOST=$(hostname)
     if [ ! "$DBHOST" == "$CLIENTHOST" ]; then CLIENT_SIDE='TRUE'; else DB_IS_LOCAL='TRUE'; fi
+
       printf "Database Host: "; TEMP_COLOR=lmagenta; print_color "$DBHOST\n"; unset TEMP_COLOR;
       printf "Client Host:   "; TEMP_COLOR=lmagenta; print_color "$CLIENTHOST\n"; unset TEMP_COLOR;
-	  if [ ! $DB_IS_LOCAL ]; then
-         printf "Notice:        ";TEMP_COLOR=lred;  print_color "Database is remote. Data regarding host will not be collected.\n";unset TEMP_COLOR;
-		 if [ $COLLECT_LOGS ]; then die "It is not possible to collect logs on a remote host."; fi
-	  fi
+	if [ "$DB_IS_LOCAL" == 'TRUE' ] && [ $OMIT_HOST_METRICS ]; then
+      printf "Notice:        ";TEMP_COLOR=lred;  print_color "Omitting host metrics.\n";unset TEMP_COLOR;
+      unset DB_IS_LOCAL; 
+      return;
+	fi
+    if [ ! $DB_IS_LOCAL ]; then
+      printf "Notice:        ";TEMP_COLOR=lred;  print_color "Database is remote. Data regarding host will not be collected.\n";unset TEMP_COLOR;
+      if [ $COLLECT_LOGS ]; then die "It is not possible to collect logs on a remote host."; fi
+    fi
 }
 
 
@@ -380,6 +386,63 @@ if [ "$DB_IS_LOCAL" == 'TRUE' ]; then
   fi
   display_file_written_message
 fi
+}
+
+function record_sysctl() {
+  if [ ! "$DB_IS_LOCAL" == 'TRUE' ]; then return; fi
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
+  if [ -x "/sbin/sysctl" ]; then
+   local SYSCTL="$(/sbin/sysctl -a 2>/dev/null)"
+   if [ ! -z "$SYSCTL" ]; then 
+     printf '%b\n' "\"$RUNID\"\t\"$SYSCTL\"" > $OUTFILE
+   else
+	 printf "\"$RUNID\"\t\"sysctl not available\"\n" > $OUTFILE
+   fi
+   display_file_written_message   
+  fi
+}
+
+function record_ls_datadir() {
+  if [ ! "$DB_IS_LOCAL" == 'TRUE' ]; then return; fi
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
+  if [ ! -z $DATADIR ] && [ -d $DATADIR ]; then
+    local LSDATADIR="$(ls -AlrthR ${DATADIR})"
+   if [ ! -z "$LSDATADIR" ]; then 
+    printf '%b\n' "\"$RUNID\"\t\"$LSDATADIR\"" > $OUTFILE
+  else
+	printf "\"$RUNID\"\t\"ls of datdir not available\"\n" > $OUTFILE
+  fi
+  display_file_written_message   
+  fi
+}
+
+function record_mount() {
+  if [ ! "$DB_IS_LOCAL" == 'TRUE' ]; then return; fi
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
+  if [ -f $(which mount) ]; then
+    local MOUNT="$(mount)"
+   if [ ! -z "$MOUNT" ]; then 
+    printf '%b\n' "\"$RUNID\"\t\"$MOUNT\"" > $OUTFILE
+  else
+	printf "\"$RUNID\"\t\"mount not available\"\n" > $OUTFILE
+  fi
+  display_file_written_message   
+  fi
+}
+
+
+function record_limits_conf() {
+  if [ ! "$DB_IS_LOCAL" == 'TRUE' ]; then return; fi
+  local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
+  if [ -f "/etc/security/limits.conf" ]; then
+    local LIMITS_CONF="$(cat /etc/security/limits.conf)"
+   if [ ! -z "$LIMITS_CONF" ]; then 
+    printf '%b\n' "\"$RUNID\"\t\"$LIMITS_CONF\"" > $OUTFILE
+  else
+	printf "\"$RUNID\"\t\"limits.conf not available\"\n" > $OUTFILE
+  fi
+  display_file_written_message   
+  fi
 }
 
 function record_ps(){
@@ -789,6 +852,7 @@ if [ $(echo "$params"|sed 's,=.*,,') == '--stats_per_min' ]; then
    if [ ! $STATS_ON_SEC ]; then INVALID_INPUT="$params"; else VALID=TRUE; fi
   fi
 fi
+  if [ "$params" == '--omit_host_metrics' ]; then OMIT_HOST_METRICS='TRUE'; VALID=TRUE; fi
   if [ "$params" == '--multi_processlist' ]; then MULTI_PROCESSLIST='TRUE'; VALID=TRUE; fi
   if [ "$params" == '--no_outfiles' ]; then OUT_TO_FILES='FALSE'; VALID=TRUE; fi
   if [ "$params" == '--redirect_to_files' ]; then CLIENT_SIDE='TRUE'; VALID=TRUE; fi  
