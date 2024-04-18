@@ -522,7 +522,7 @@ if [ ! -f "$LOG_ERROR" ] ; then return; fi
 local OUTFILE="$QK_TMPDIR/$1.tsv" # Always a .tsv 
 RECENT=$(tail -200000 $LOG_ERROR | grep -i "\[ERROR\]")
  while IFS= read -r line; do
-   if [ ! -z "$line" ]; then line=$(echo ${line} | sed 's|["'\'']||g'); printf "$RUNID\t\"$line\"\n" >> $OUTFILE; else touch $OUTFILE; fi
+   if [ ! -z "$line" ]; then line=$(echo ${line} | sed 's|["'\'']||g' | sed  's/\%/\%\%/g'); printf "$RUNID\t\"$line\"\n" >> $OUTFILE; else touch $OUTFILE; fi
  done <<< "$RECENT"
  display_file_written_message
 }
