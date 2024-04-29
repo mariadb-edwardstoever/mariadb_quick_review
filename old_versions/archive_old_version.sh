@@ -13,7 +13,7 @@ OUTDIR=${SCRIPT_DIR}/${SCRIPT_VERSION}
 echo $OUTDIR
 
 mkdir -p $OUTDIR
-find ./mariadb_quick_review \( -path ./mariadb_quick_review/old_versions -o -path ./mariadb_quick_review/.git \) -prune -o -type f ! -name "*.tar.gz" | cpio -ov | bzip2 > ${OUTDIR}/quick_review_archive_${EPOCH}.cpio.bz2
+find ./mariadb_quick_review \( -path ./mariadb_quick_review/old_versions -o -path ./mariadb_quick_review/.git -o -path ./mariadb_quick_review/bin \) -prune -o -type f ! -name "*.tar.gz" | cpio -ov | bzip2 > ${OUTDIR}/quick_review_archive_${EPOCH}.cpio.bz2
 if [ -f ${OUTDIR}/quick_review_archive_${EPOCH}.cpio.bz2 ]; then
 echo "Archive created:"; ls -l ${OUTDIR}/quick_review_archive_${EPOCH}.cpio.bz2;
 else

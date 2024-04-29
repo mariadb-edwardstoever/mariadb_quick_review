@@ -102,4 +102,11 @@ UNION ALL
   where VARIABLE_NAME='INNODB_AUTOINC_LOCK_MODE'
   and VARIABLE_VALUE!=2
   and @IS_GALERA='YES'
-
+UNION ALL
+  select '$RUNID', now() as TICK, @@HOSTNAME,
+  concat('Incorrect value for innodb_force_recovery: ', VARIABLE_VALUE) as ITEM,
+  'innodb_force_recovery should always be 0 unless it is an emergency situation.' as STATUS,
+  concat('https://mariadb.com/kb/en/innodb-recovery-modes/') as INFO
+  from information_schema.GLOBAL_VARIABLES
+  where VARIABLE_NAME='INNODB_FORCE_RECOVERY'
+  and VARIABLE_VALUE!=0
